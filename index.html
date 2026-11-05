@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventario Tienda</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#f5f6f8; --card:#fff; --text:#1f2933; --muted:#6b7280; --line:#e5e7eb;
+    --primary:#16a34a; --primary-dark:#15803d; --danger:#dc2626; --warn-bg:#fef2f2; --ok-bg:#ecfdf5;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text)}
+  button{font:inherit;cursor:pointer}
+  input,select{font:inherit;width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#fff}
+  input:focus,select:focus{outline:2px solid var(--primary);border-color:transparent}
+  label{display:block;font-size:.85rem;color:var(--muted);margin:12px 0 4px}
+  .btn{border:0;border-radius:8px;padding:10px 16px;font-weight:600}
+  .btn-primary{background:var(--primary);color:#fff}
+  .btn-primary:hover{background:var(--primary-dark)}
+  .btn-light{background:#fff;border:1px solid var(--line);color:var(--text)}
+  .hidden{display:none!important}
+  .error{color:var(--danger);font-size:.9rem;margin-top:10px;min-height:1.2em}
+
+  /* Login */
+  #login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+  .login-card{background:var(--card);padding:32px;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.06);width:100%;max-width:380px}
+  .login-card h1{margin:0 0 4px;font-size:1.5rem}
+  .login-card p{margin:0 0 12px;color:var(--muted)}
+  .login-card .btn{width:100%;margin-top:20px}
+
+  /* App */
+  header{background:var(--card);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:5}
+  header h1{margin:0;font-size:1.15rem}
+  header small{color:var(--muted);display:block;font-size:.8rem}
+  main{max-width:1100px;margin:0 auto;padding:16px}
+  .resumen{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+  .tarjeta{background:var(--card);border-radius:12px;padding:14px 16px;border:1px solid var(--line)}
+  .tarjeta span{color:var(--muted);font-size:.85rem}
+  .tarjeta strong{display:block;font-size:1.4rem;margin-top:4px}
+  .barra{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  .barra input{flex:1;min-width:200px}
+  .barra select{width:auto}
+  .tabla-wrap{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow-x:auto}
+  table{width:100%;border-collapse:collapse;min-width:720px}
+  th,td{padding:12px;text-align:left;border-bottom:1px solid var(--line);font-size:.92rem}
+  th{background:#fafafa;color:var(--muted);font-weight:600;font-size:.8rem;text-transform:uppercase}
+  tr:last-child td{border-bottom:0}
+  td.num,th.num{text-align:right}
+  .badge{padding:3px 10px;border-radius:999px;font-weight:600;font-size:.85rem;display:inline-block}
+  .badge.ok{background:var(--ok-bg);color:var(--primary-dark)}
+  .badge.bajo{background:var(--warn-bg);color:var(--danger)}
+  .vacio{text-align:center;color:var(--muted);padding:40px}
+  .link{background:none;border:0;color:var(--primary-dark);font-weight:600;padding:4px}
+
+  /* Modal */
+  .modal-fondo{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+  .modal{background:var(--card);border-radius:14px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;padding:24px}
+  .modal h2{margin:0 0 4px}
+  .fila{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .acciones{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+  @media (max-width:520px){.fila{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- ========== LOGIN ========== -->
+<section id="login">
+  <form class="login-card" id="formLogin">
+    <h1>Inventario Tienda</h1>
+    <p>Inicia sesión para continuar</p>
+    <label>Correo</label>
+    <input type="email" id="email" required autocomplete="email">
+    <label>Contraseña</label>
+    <input type="password" id="password" required autocomplete="current-password">
+    <button class="btn btn-primary" type="submit">Entrar</button>
+    <div class="error" id="errorLogin"></div>
+  </form>
+</section>
+
+<!-- ========== APP ========== -->
+<section id="app" class="hidden">
+  <header>
+    <div>
+      <h1>Inventario Tienda</h1>
+      <small id="usuario"></small>
+    </div>
+    <button class="btn btn-light" id="btnSalir">Salir</button>
+  </header>
+
+  <main>
+    <div class="resumen">
+      <div class="tarjeta"><span>Productos</span><strong id="totalProductos">0</strong></div>
+      <div class="tarjeta"><span>Con stock bajo</span><strong id="totalBajo" style="color:var(--danger)">0</strong></div>
+      <div class="tarjeta"><span>Valor del inventario</span><strong id="valorInventario">$0</strong></div>
+    </div>
+
+    <div class="barra">
+      <input type="search" id="buscar" placeholder="Buscar por nombre o código de barras...">
+      <select id="filtroCategoria"><option value="">Todas las categorías</option></select>
+      <button class="btn btn-primary" id="btnNuevo">+ Nuevo producto</button>
+    </div>
+
+    <div class="tabla-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Producto</th>
+            <th>Categoría</th>
+            <th>Unidad</th>
+            <th class="num">P. compra</th>
+            <th class="num">P. venta</th>
+            <th class="num">Stock</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tablaProductos"></tbody>
+      </table>
+    </div>
+  </main>
+</section>
+
+<!-- ========== MODAL PRODUCTO ========== -->
+<div class="modal-fondo hidden" id="modal">
+  <form class="modal" id="formProducto">
+    <h2 id="tituloModal">Nuevo producto</h2>
+    <input type="hidden" id="prodId">
+
+    <label>Código de barras</label>
+    <input type="text" id="prodCodigo" placeholder="Opcional">
+
+    <label>Nombre *</label>
+    <input type="text" id="prodNombre" required placeholder="Ej: Arroz Diana 500 g">
+
+    <div class="fila">
+      <div>
+        <label>Categoría</label>
+        <select id="prodCategoria"></select>
+      </div>
+      <div>
+        <label>Proveedor</label>
+        <select id="prodProveedor"></select>
+      </div>
+    </div>
+
+    <div class="fila">
+      <div>
+        <label>Unidad de venta</label>
+        <select id="prodUnidad">
+          <option value="unidad">Unidad</option>
+          <option value="libra">Libra</option>
+          <option value="kilo">Kilo</option>
+          <option value="paquete">Paquete</option>
+        </select>
+      </div>
+      <div>
+        <label>Stock mínimo (alerta)</label>
+        <input type="number" id="prodMinimo" min="0" step="0.01" value="0">
+      </div>
+    </div>
+
+    <div class="fila">
+      <div>
+        <label>Precio de compra</label>
+        <input type="number" id="prodCompra" min="0" step="1" value="0">
+      </div>
+      <div>
+        <label>Precio de venta</label>
+        <input type="number" id="prodVenta" min="0" step="1" value="0">
+      </div>
+    </div>
+
+    <div class="error" id="errorProducto"></div>
+    <div class="acciones">
+      <button type="button" class="btn btn-light" id="btnCancelar">Cancelar</button>
+      <button type="submit" class="btn btn-primary">Guardar</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  // ===== CONEXIÓN A SUPABASE =====
+  const SUPABASE_URL = 'https://iibwvxuchcoeyzrmocju.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_fUlURD_H_Tzg5TY1LFp6Ew_nn1pfOMB';
+  const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const $ = id => document.getElementById(id);
+  const pesos = n => '$' + Number(n || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 });
+  const numero = n => Number(n || 0).toLocaleString('es-CO', { maximumFractionDigits: 2 });
+
+  let productos = [];
+  let categorias = [];
+  let proveedores = [];
+
+  // ===== SESIÓN =====
+  async function revisarSesion() {
+    const { data: { session } } = await db.auth.getSession();
+    if (session) {
+      $('login').classList.add('hidden');
+      $('app').classList.remove('hidden');
+      $('usuario').textContent = session.user.email;
+      await cargarTodo();
+    } else {
+      $('app').classList.add('hidden');
+      $('login').classList.remove('hidden');
+    }
+  }
+
+  $('formLogin').addEventListener('submit', async e => {
+    e.preventDefault();
+    $('errorLogin').textContent = '';
+    const { error } = await db.auth.signInWithPassword({
+      email: $('email').value.trim(),
+      password: $('password').value
+    });
+    if (error) { $('errorLogin').textContent = 'Correo o contraseña incorrectos.'; return; }
+    revisarSesion();
+  });
+
+  $('btnSalir').addEventListener('click', async () => {
+    await db.auth.signOut();
+    revisarSesion();
+  });
+
+  // ===== CARGAR DATOS =====
+  async function cargarTodo() {
+    const [cat, prov, prod, stock] = await Promise.all([
+      db.from('categorias').select('*').order('nombre'),
+      db.from('proveedores').select('*').order('nombre'),
+      db.from('productos').select('*, categorias(nombre)').eq('activo', true).order('nombre'),
+      db.from('stock_productos').select('id, stock')
+    ]);
+
+    if (prod.error) { alert('Error cargando productos: ' + prod.error.message); return; }
+
+    categorias = cat.data || [];
+    proveedores = prov.data || [];
+    const stockPorId = Object.fromEntries((stock.data || []).map(s => [s.id, Number(s.stock)]));
+    productos = (prod.data || []).map(p => ({ ...p, stock: stockPorId[p.id] ?? 0 }));
+
+    llenarSelects();
+    mostrarProductos();
+  }
+
+  function llenarSelects() {
+    const opcCat = categorias.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+    $('filtroCategoria').innerHTML = '<option value="">Todas las categorías</option>' + opcCat;
+    $('prodCategoria').innerHTML = '<option value="">Sin categoría</option>' + opcCat;
+    $('prodProveedor').innerHTML = '<option value="">Sin proveedor</option>' +
+      proveedores.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+  }
+
+  // ===== MOSTRAR TABLA =====
+  function mostrarProductos() {
+    const texto = $('buscar').value.trim().toLowerCase();
+    const cat = $('filtroCategoria').value;
+
+    const lista = productos.filter(p =>
+      (!texto || p.nombre.toLowerCase().includes(texto) || (p.codigo_barras || '').includes(texto)) &&
+      (!cat || String(p.categoria_id) === cat)
+    );
+
+    $('tablaProductos').innerHTML = lista.length ? lista.map(p => {
+      const bajo = p.stock <= Number(p.stock_minimo);
+      return `<tr>
+        <td>${p.codigo_barras || '—'}</td>
+        <td><strong>${p.nombre}</strong></td>
+        <td>${p.categorias?.nombre || '—'}</td>
+        <td>${p.unidad}</td>
+        <td class="num">${pesos(p.precio_compra)}</td>
+        <td class="num">${pesos(p.precio_venta)}</td>
+        <td class="num"><span class="badge ${bajo ? 'bajo' : 'ok'}">${numero(p.stock)}</span></td>
+        <td><button class="link" onclick="editar(${p.id})">Editar</button></td>
+      </tr>`;
+    }).join('') : `<tr><td colspan="8" class="vacio">No hay productos. Crea el primero con "+ Nuevo producto".</td></tr>`;
+
+    // Resumen
+    $('totalProductos').textContent = productos.length;
+    $('totalBajo').textContent = productos.filter(p => p.stock <= Number(p.stock_minimo)).length;
+    $('valorInventario').textContent = pesos(
+      productos.reduce((t, p) => t + Math.max(p.stock, 0) * Number(p.precio_compra || 0), 0)
+    );
+  }
+
+  $('buscar').addEventListener('input', mostrarProductos);
+  $('filtroCategoria').addEventListener('change', mostrarProductos);
+
+  // ===== CREAR / EDITAR =====
+  function abrirModal(p = null) {
+    $('errorProducto').textContent = '';
+    $('tituloModal').textContent = p ? 'Editar producto' : 'Nuevo producto';
+    $('prodId').value = p?.id || '';
+    $('prodCodigo').value = p?.codigo_barras || '';
+    $('prodNombre').value = p?.nombre || '';
+    $('prodCategoria').value = p?.categoria_id || '';
+    $('prodProveedor').value = p?.proveedor_id || '';
+    $('prodUnidad').value = p?.unidad || 'unidad';
+    $('prodMinimo').value = p?.stock_minimo ?? 0;
+    $('prodCompra').value = p?.precio_compra ?? 0;
+    $('prodVenta').value = p?.precio_venta ?? 0;
+    $('modal').classList.remove('hidden');
+    $('prodNombre').focus();
+  }
+
+  function cerrarModal() { $('modal').classList.add('hidden'); }
+
+  window.editar = id => abrirModal(productos.find(p => p.id === id));
+  $('btnNuevo').addEventListener('click', () => abrirModal());
+  $('btnCancelar').addEventListener('click', cerrarModal);
+  $('modal').addEventListener('click', e => { if (e.target.id === 'modal') cerrarModal(); });
+
+  $('formProducto').addEventListener('submit', async e => {
+    e.preventDefault();
+    const datos = {
+      codigo_barras: $('prodCodigo').value.trim() || null,
+      nombre: $('prodNombre').value.trim(),
+      categoria_id: $('prodCategoria').value || null,
+      proveedor_id: $('prodProveedor').value || null,
+      unidad: $('prodUnidad').value,
+      stock_minimo: Number($('prodMinimo').value || 0),
+      precio_compra: Number($('prodCompra').value || 0),
+      precio_venta: Number($('prodVenta').value || 0)
+    };
+
+    const id = $('prodId').value;
+    const { error } = id
+      ? await db.from('productos').update(datos).eq('id', id)
+      : await db.from('productos').insert(datos);
+
+    if (error) {
+      $('errorProducto').textContent = error.code === '23505'
+        ? 'Ya existe un producto con ese código de barras.'
+        : 'Error: ' + error.message;
+      return;
+    }
+    cerrarModal();
+    cargarTodo();
+  });
+
+  revisarSesion();
+</script>
+</body>
+</html>
