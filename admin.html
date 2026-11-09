@@ -23,7 +23,7 @@
     <div class="lm-top"><div class="marca-logo" id="logoLogin"></div><span>Panel de administración</span></div>
     <div>
       <h1>Todas tus tiendas, sus cuentas y sus cobros en un solo lugar.</h1>
-      <p>Crea tiendas y usuarios, controla los planes y pagos de cada cliente y configura su facturación electrónica.</p>
+      <p>Crea tiendas y usuarios, elige qué aplicación usa cada cliente (Inventario Tienda o Control de Permitidos), controla sus planes y pagos y configura su facturación electrónica.</p>
     </div>
     <div class="lm-pie">Acceso exclusivo para el administrador del software.</div>
   </div>
@@ -97,6 +97,8 @@ const PLANES = {
   pro: { n: 'Pro', d: 'Todo lo anterior con soporte prioritario y acompañamiento.' },
   personalizado: { n: 'Personalizado', d: 'Condiciones acordadas con la tienda.' },
 };
+const APPS = { inventario: 'Inventario Tienda', permitidos: 'Control de Permitidos', ambas: 'Las dos' };
+const URL_PERMITIDOS = 'https://franciscoortiz012345-lang.github.io/control-permitidos/';
 const MEDIOS_SUS = { transferencia: 'Transferencia', nequi: 'Nequi', daviplata: 'Daviplata', efectivo: 'Efectivo', tarjeta: 'Tarjeta' };
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
@@ -260,10 +262,23 @@ function ir(v, migaExtra = '') {
 }
 const encabezado = (t, sub, acc = '') => `<div class="encabezado"><div><h1>${t}</h1>${sub ? `<p>${sub}</p>` : ''}</div>${acc ? `<div class="row">${acc}</div>` : ''}</div>`;
 async function cargarTiendas() {
-  const { data, error } = await db.rpc('admin_tiendas');
-  if (error) throw error;
-  tiendas = data || [];
+  const [r, apps, perm] = await Promise.all([
+    db.rpc('admin_tiendas'),
+    db.from('tiendas').select('id, aplicacion'),
+    db.rpc('admin_permitidos_resumen'),
+  ]);
+  if (r.error) throw r.error;
+  const appDe = Object.fromEntries((apps.data || []).map(x => [x.id, x.aplicacion]));
+  const permDe = Object.fromEntries((perm.data || []).map(x => [x.tienda_id, x]));
+  tiendas = (r.data || []).map(t => {
+    const p = permDe[t.id] || {};
+    const aplicacion = appDe[t.id] || 'inventario';
+    const mov = (aplicacion !== 'permitidos' ? Number(t.ventas_mes || 0) : 0) + (aplicacion !== 'inventario' ? Number(p.recaudado_mes || 0) : 0);
+    return { ...t, aplicacion, recaudado_mes: Number(p.recaudado_mes || 0), entregado_mes: Number(p.entregado_mes || 0), saldo_locales: Number(p.saldo || 0), locales: Number(p.locales || 0), mov_mes: mov };
+  });
 }
+const badgeApp = a => `<span class="badge ${a === 'permitidos' ? 'dueno' : a === 'ambas' ? 'info' : 'neutro'}">${esc(APPS[a] || a)}</span>`;
+const opcApps = sel => Object.entries(APPS).map(([k, v]) => `<option value="${k}" ${sel === k ? 'selected' : ''}>${v}</option>`).join('');
 const estadoPago = t => {
   if (t.estado !== 'activa') return '<span class="badge neutro">Suspendida</span>';
   if (!t.proximo_pago) return '<span class="badge neutro">Sin fecha</span>';
@@ -297,7 +312,7 @@ async function verResumen() {
   const cobradoMes = pagos.filter(p => p.fecha.slice(0, 7) === mesActual).reduce((t, p) => t + Number(p.valor), 0);
   const vencidas = act.filter(t => t.proximo_pago && diasHasta(t.proximo_pago) < 0);
   const proximas = act.filter(t => t.proximo_pago && diasHasta(t.proximo_pago) <= 10).sort((a, b) => a.proximo_pago.localeCompare(b.proximo_pago));
-  const ventasMes = tiendas.reduce((t, x) => t + Number(x.ventas_mes || 0), 0);
+  const ventasMes = tiendas.reduce((t, x) => t + Number(x.mov_mes || 0), 0);
   const porPlan = {};
   act.forEach(t => { const k = PLANES[t.plan] ? t.plan : 'basico'; (porPlan[k] ||= { n: 0, v: 0 }); porPlan[k].n++; porPlan[k].v += Number(t.valor_mensual || 0); });
   const meses = Array.from({ length: 6 }, (_, i) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 5 + i); return { k: aFecha(d).slice(0, 7), n: MESES[d.getMonth()], v: 0 }; });
@@ -309,7 +324,7 @@ async function verResumen() {
       <div class="kpi bueno"><span>Cobrado este mes</span><strong>${pesos(cobradoMes)}</strong><small>${plural(pagos.filter(p => p.fecha.slice(0, 7) === mesActual).length, 'pago registrado', 'pagos registrados')}</small></div>
       <div class="kpi"><span>Tiendas activas</span><strong>${act.length}</strong><small>de ${tiendas.length} en total</small></div>
       <div class="kpi ${vencidas.length ? 'alerta' : ''}"><span>Pagos vencidos</span><strong>${vencidas.length}</strong><small>${pesos(vencidas.reduce((t, x) => t + Number(x.valor_mensual || 0), 0))} por cobrar</small></div>
-      <div class="kpi"><span>Ventas de tus clientes</span><strong>${pesos(ventasMes)}</strong><small>Este mes, todas las tiendas</small></div>
+      <div class="kpi"><span>Movimiento de tus clientes</span><strong>${pesos(ventasMes)}</strong><small>Ventas y recaudos de este mes</small></div>
     </div>
     <div class="col-ancha">
       <div class="panel"><div class="panel-cab"><div><h2>Próximos cobros</h2><p class="sub">Vencidos y los que vencen en los próximos 10 días</p></div><button class="link" id="verPagos">Ver pagos</button></div>
@@ -338,28 +353,29 @@ async function verResumen() {
 async function verTiendas() {
   $('contenido').innerHTML = encabezado('Tiendas', 'Todas las tiendas que usan tu software', `<button class="btn btn-primary" id="bNueva">${ico('mas')}Nueva tienda</button>`) +
     `<div class="filtros"><input type="search" id="fTexto" placeholder="Buscar tienda o dueño…"><select id="fPlan"><option value="">Todos los planes</option>${Object.entries(PLANES).map(([k, p]) => `<option value="${k}">${p.n}</option>`).join('')}</select>
-      <select id="fEstado"><option value="">Todas</option><option value="activa">Activas</option><option value="suspendida">Suspendidas</option><option value="vencida">Pago vencido</option></select></div>
+      <select id="fEstado"><option value="">Todas</option><option value="activa">Activas</option><option value="suspendida">Suspendidas</option><option value="vencida">Pago vencido</option></select>
+      <select id="fApp"><option value="">Todas las aplicaciones</option>${opcApps('')}</select></div>
     <div id="cuerpo" class="muted">Cargando…</div>`;
   $('bNueva').onclick = modalNuevaTienda;
   try { await cargarTiendas(); } catch (e) { $('cuerpo').textContent = errorTexto(e); return; }
   const pintar = () => {
-    const q = $('fTexto').value.trim().toLowerCase(), pl = $('fPlan').value, es = $('fEstado').value;
-    const lista = tiendas.filter(t => (!q || t.nombre.toLowerCase().includes(q) || (t.dueno || '').includes(q)) && (!pl || t.plan === pl) &&
+    const q = $('fTexto').value.trim().toLowerCase(), pl = $('fPlan').value, es = $('fEstado').value, ap = $('fApp').value;
+    const lista = tiendas.filter(t => (!ap || t.aplicacion === ap) && (!q || t.nombre.toLowerCase().includes(q) || (t.dueno || '').includes(q)) && (!pl || t.plan === pl) &&
       (!es || (es === 'vencida' ? t.estado === 'activa' && t.proximo_pago && diasHasta(t.proximo_pago) < 0 : t.estado === es)));
     $('cuerpo').className = '';
-    $('cuerpo').innerHTML = tablaSimple('<th>Tienda</th><th>Dueño</th><th>Plan</th><th class="num">Valor mensual</th><th>Próximo pago</th><th class="num">Usuarios</th><th class="num">Ventas del mes</th><th>FE</th>',
+    $('cuerpo').innerHTML = tablaSimple('<th>Tienda</th><th>Dueño</th><th>Plan</th><th class="num">Valor mensual</th><th>Próximo pago</th><th class="num">Usuarios</th><th class="num">Movimiento del mes</th><th>Aplicación</th><th>FE</th>',
       lista.map(t => `<tr class="clic" data-id="${t.id}">
         <td><b>${esc(t.nombre)}</b><br><span class="small muted">Desde ${fechaCorta(t.creado_en)}</span>${t.estado !== 'activa' ? ' <span class="badge no">Suspendida</span>' : ''}</td>
         <td class="small">${t.dueno ? esc(t.dueno) : '<span class="badge aviso">Sin dueño</span>'}</td>
         <td>${esc(PLANES[t.plan]?.n || 'Básico')}</td>
         <td class="num">${Number(t.valor_mensual) ? pesos(t.valor_mensual) : '<span class="muted">—</span>'}</td>
         <td>${t.proximo_pago ? fechaCorta(t.proximo_pago) + '<br>' : ''}${estadoPago(t)}</td>
-        <td class="num">${t.usuarios}</td><td class="num">${pesos(t.ventas_mes)}</td>
+        <td class="num">${t.usuarios}</td><td class="num">${pesos(t.mov_mes)}${t.aplicacion !== 'inventario' && t.saldo_locales ? `<br><span class="small muted">Le deben ${pesos(t.saldo_locales)}</span>` : ''}</td><td>${badgeApp(t.aplicacion)}</td>
         <td>${t.fe_activa ? '<span class="badge ok">Activa</span>' : '<span class="badge neutro">No</span>'}</td></tr>`).join(''),
       tiendas.length ? 'Ninguna tienda coincide con el filtro.' : 'Aún no hay tiendas. Crea la primera con "Nueva tienda".');
     $('cuerpo').querySelectorAll('[data-id]').forEach(r => r.onclick = () => verTienda(Number(r.dataset.id)));
   };
-  $('fTexto').oninput = pintar; $('fPlan').onchange = pintar; $('fEstado').onchange = pintar;
+  $('fTexto').oninput = pintar; $('fPlan').onchange = pintar; $('fEstado').onchange = pintar; $('fApp').onchange = pintar;
   pintar();
 }
 
@@ -373,6 +389,7 @@ function modalNuevaTienda() {
       <div><label for="tNit">NIT o cédula</label><input id="tNit"></div>
       <div><label for="tDir">Dirección</label><input id="tDir"></div>
       <div><label for="tTel">Teléfono (WhatsApp)</label><input id="tTel" inputmode="tel"></div>
+      <div><label for="tApp">Aplicación que usa</label><select id="tApp">${opcApps('inventario')}</select></div>
     </div>
     <div class="seccion-modal">Plan y cobro</div>
     <div class="grid3">
@@ -391,7 +408,7 @@ function modalNuevaTienda() {
   const el = s => m.el.querySelector(s);
   el('#dGen').onclick = () => el('#dClave').value = generarClave();
   el('#tCrear').onclick = async () => {
-    const t = { nombre: el('#tNombre').value.trim(), nit: el('#tNit').value.trim() || null, direccion: el('#tDir').value.trim() || null, telefono: el('#tTel').value.trim() || null };
+    const t = { nombre: el('#tNombre').value.trim(), nit: el('#tNit').value.trim() || null, direccion: el('#tDir').value.trim() || null, telefono: el('#tTel').value.trim() || null, aplicacion: el('#tApp').value };
     const plan = { plan: el('#tPlan').value, valor_mensual: Number(el('#tValor').value || 0), proximo_pago: el('#tProx').value || null };
     const d = { nombre: el('#dNombre').value.trim(), email: el('#dEmail').value.trim().toLowerCase(), password: el('#dClave').value.trim() };
     if (!t.nombre) return aviso('Escribe el nombre de la tienda.', 'error');
@@ -406,7 +423,7 @@ function modalNuevaTienda() {
     try {
       await cuentas({ accion: 'crear', tienda_id: id, rol: 'dueno', ...d });
       m.cerrar();
-      mostrarCredenciales(d.nombre, d.email, d.password, t.nombre);
+      mostrarCredenciales(d.nombre, d.email, d.password, t.nombre, t.aplicacion);
     } catch (e) {
       m.cerrar();
       aviso(`La tienda se creó, pero la cuenta del dueño no: ${errorTexto(e)}`, 'error');
@@ -436,6 +453,7 @@ async function verTienda(id) {
           <div><label for="eNit">NIT o cédula</label><input id="eNit" value="${esc(t.nit || '')}"></div>
           <div><label for="eDir">Dirección</label><input id="eDir" value="${esc(t.direccion || '')}"></div>
           <div><label for="eTel">Teléfono (WhatsApp)</label><input id="eTel" value="${esc(t.telefono || '')}"></div>
+          <div><label for="eApp">Aplicación que usa</label><select id="eApp">${opcApps(t.aplicacion || 'inventario')}</select></div>
         </div>
         <div class="modal-acciones" style="margin-top:16px"><button class="btn btn-primary" id="bGuardar">Guardar datos</button></div>
       </div>
@@ -448,6 +466,11 @@ async function verTienda(id) {
         </div>
         <div class="modal-acciones"><button class="btn" id="sRecordar">${ico('whatsapp')}Recordar pago</button><button class="btn" id="sPagar">${ico('pagos')}Registrar pago</button><button class="btn btn-primary" id="sGuardar">Guardar plan</button></div>
       </div>
+    </div>
+    <div class="panel" style="margin-top:16px" id="panelPerm"><div class="panel-cab"><div><h2>Control de Permitidos</h2><p class="sub">Entregas a locales, cobros y saldos de este cliente</p></div><a class="btn btn-sm" href="${URL_PERMITIDOS}" target="_blank" rel="noopener">Abrir la aplicación</a></div>
+      <div class="kpis" id="permKpis"><p class="muted">Cargando…</p></div>
+      <div class="fe-caja" style="margin-top:14px"><b>Restablecer la información</b><span class="small">Borra los datos de Control de Permitidos de esta tienda. No toca Inventario Tienda (ventas, caja, productos). No se puede deshacer.</span>
+        <div class="row" style="margin-top:10px"><button class="btn btn-sm" id="permMov">Borrar solo movimientos</button><button class="btn btn-sm btn-danger" id="permTodo">Borrar todo</button></div></div>
     </div>
     <div class="panel" style="margin-top:16px"><div class="panel-cab"><div><h2>Usuarios</h2><p class="sub">Cuentas que pueden entrar a esta tienda</p></div><button class="btn btn-primary btn-sm" id="bNuevoU">${ico('mas')}Nuevo usuario</button></div>
       <div id="tablaU" class="muted">Cargando…</div></div>
@@ -472,8 +495,29 @@ async function verTienda(id) {
     </div>
     </div>`;
   $('bVolver').onclick = () => ir('tiendas');
+  const pintarPerm = async () => {
+    const { data } = await db.rpc('admin_permitidos_resumen');
+    const p = (data || []).find(x => x.tienda_id === id) || {};
+    $('permKpis').innerHTML = `<div class="kpi"><span>Entregado este mes</span><strong>${pesos(p.entregado_mes)}</strong></div>
+      <div class="kpi"><span>Recaudado este mes</span><strong>${pesos(p.recaudado_mes)}</strong></div>
+      <div class="kpi"><span>Le deben los locales</span><strong>${pesos(p.saldo)}</strong></div>
+      <div class="kpi"><span>Locales registrados</span><strong>${Number(p.locales || 0).toLocaleString('es-CO')}</strong></div>`;
+  };
+  pintarPerm().catch(() => { $('permKpis').innerHTML = '<p class="muted">No se pudo cargar.</p>'; });
+  const restablecerPerm = async alcance => {
+    const txt = alcance === 'todo'
+      ? `Se borran TODOS los datos de Control de Permitidos de "${t.nombre}": entregas, cobros, devoluciones, prendas, locales y centros comerciales. La cuenta queda vacía.`
+      : `Se borran las entregas, cobros, devoluciones y el historial de inventario de "${t.nombre}". Se conservan prendas, precios y locales, con existencias en 0.`;
+    if (!await confirmar('Restablecer Control de Permitidos', txt + '\n\nEsto no se puede deshacer.', 'Sí, borrar', true)) return;
+    const { data, error } = await db.rpc('admin_cp_restablecer', { p_tienda: id, p_alcance: alcance });
+    if (error) return aviso(errorTexto(error), 'error');
+    aviso(`Listo: se borraron ${data.entregas} entregas y ${data.cobros} cobros.`, 'ok');
+    pintarPerm(); cargarTiendas().catch(() => {});
+  };
+  $('permMov').onclick = () => restablecerPerm('movimientos');
+  $('permTodo').onclick = () => restablecerPerm('todo');
   $('bGuardar').onclick = async () => {
-    const datos = { nombre: $('eNombre').value.trim(), nit: $('eNit').value.trim() || null, direccion: $('eDir').value.trim() || null, telefono: $('eTel').value.trim() || null };
+    const datos = { nombre: $('eNombre').value.trim(), nit: $('eNit').value.trim() || null, direccion: $('eDir').value.trim() || null, telefono: $('eTel').value.trim() || null, aplicacion: $('eApp').value };
     if (!datos.nombre) return aviso('El nombre es obligatorio.', 'error');
     const { error } = await db.from('tiendas').update(datos).eq('id', id);
     if (error) return aviso(errorTexto(error), 'error');
@@ -680,7 +724,7 @@ function modalUsuario(u, tiendaFija, alGuardar) {
     </div>
     <label for="uClave">${nuevo ? 'Contraseña' : 'Nueva contraseña (opcional)'}</label>
     <div class="clave"><input id="uClave" value="${clave}" placeholder="${nuevo ? '' : 'Déjala vacía para no cambiarla'}"><button class="btn" id="uGen" type="button">Generar</button></div>
-    <p class="small muted" style="margin:8px 0 0">El cajero vende, abre y cierra caja, registra gastos, entradas y fiados. El dueño además ve costos y reportes, anula ventas y configura su tienda.</p>
+    <p class="small muted" style="margin:8px 0 0">En Inventario Tienda, el cajero vende, abre y cierra caja, registra gastos, entradas y fiados. En Control de Permitidos, el cajero es el cobrador: registra entregas, cobros y devoluciones. El dueño además ve costos y reportes, anula movimientos y configura su tienda.</p>
     <div class="modal-acciones"><button class="btn" data-cerrar>Cancelar</button><button class="btn btn-primary" id="uGuardar">${nuevo ? 'Crear usuario' : 'Guardar cambios'}</button></div>`);
   const el = s => m.el.querySelector(s);
   if (!tiendas.length) cargarTiendas().then(() => { el('#uTienda').innerHTML = opcTiendas(); }).catch(() => {});
@@ -700,15 +744,15 @@ function modalUsuario(u, tiendaFija, alGuardar) {
         await cuentas(cambios);
       }
       m.cerrar();
-      if (nuevo || d.password) mostrarCredenciales(d.nombre, d.email, d.password, tiendas.find(t => t.id === d.tienda_id)?.nombre || '');
+      if (nuevo || d.password) mostrarCredenciales(d.nombre, d.email, d.password, tiendas.find(t => t.id === d.tienda_id)?.nombre || '', tiendas.find(t => t.id === d.tienda_id)?.aplicacion);
       else aviso('Cambios guardados', 'ok');
       alGuardar && alGuardar();
     } catch (e) { el('#uGuardar').disabled = false; aviso(errorTexto(e), 'error'); }
   };
 }
 
-function mostrarCredenciales(nombre, email, clave, tienda) {
-  const texto = `Hola ${nombre.split(' ')[0]}, este es tu acceso a ${tienda || 'la tienda'}:\n\nEnlace: ${URL_APP}\nCorreo: ${email}\nContraseña: ${clave}`;
+function mostrarCredenciales(nombre, email, clave, tienda, aplicacion) {
+  const texto = `Hola ${nombre.split(' ')[0]}, este es tu acceso a ${tienda || 'la tienda'}:\n\nEnlace: ${aplicacion === 'permitidos' ? URL_PERMITIDOS : aplicacion === 'ambas' ? `${URL_APP} (tienda)\n${URL_PERMITIDOS} (permitidos)` : URL_APP}\nCorreo: ${email}\nContraseña: ${clave}`;
   const m = abrirModal(`<h2>Acceso listo</h2><p class="muted">Envíale estos datos a la persona. Por seguridad, esta contraseña no se vuelve a mostrar.</p>
     <div class="credenciales">${esc(texto)}</div>
     <div class="modal-acciones"><button class="btn" id="cCopiar">Copiar</button><button class="btn" id="cWa">${ico('whatsapp')}Enviar por WhatsApp</button><button class="btn btn-primary" data-cerrar>Listo</button></div>`);
