@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Administración | Plataforma de softwares</title>
+<meta name="theme-color" content="#14233c">
+<meta name="robots" content="noindex">
+<script>try{var t=localStorage.getItem('tema');document.documentElement.dataset.theme=t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilos.css?v=6">
+<link rel="icon" href="icon-192.png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+<div id="toasts" aria-live="polite"></div>
+
+<!-- ========== INGRESO ========== -->
+<section id="vLogin" class="login hidden">
+  <div class="login-marca">
+    <div class="lm-top"><div class="marca-logo" id="logoLogin"></div><span>Panel de administración</span></div>
+    <div>
+      <h1>Todos tus softwares, sus clientes y sus cobros en un solo lugar.</h1>
+      <p>Crea empresas y usuarios, controla qué software usa cada uno, sus planes y pagos, y configura la facturación electrónica.</p>
+    </div>
+    <div class="lm-pie">Acceso exclusivo para el administrador del software.</div>
+  </div>
+  <div class="login-form">
+    <div class="lf-caja">
+      <h2>Iniciar sesión</h2>
+      <p class="muted" style="margin:6px 0 0">Entra con tu cuenta de administrador.</p>
+      <form id="fLogin">
+        <label for="lEmail">Correo</label><input type="email" id="lEmail" required autocomplete="email">
+        <label for="lClave">Contraseña</label><input type="password" id="lClave" required autocomplete="current-password">
+        <button class="btn btn-primary btn-lg" type="submit" id="bEntrar">Entrar</button>
+        <div class="msg" id="lMsg"></div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- ========== PANEL ========== -->
+<div id="vPanel" class="app hidden">
+  <aside class="sidebar" id="menu">
+    <div class="marca"><div class="marca-logo" id="logoPanel"></div><div style="min-width:0"><b>Administración</b><span class="sb-sub">Plataforma de softwares</span></div></div>
+    <nav id="nav" aria-label="Secciones"></nav>
+    <div class="sb-pie"><div class="sb-version">Versión 6.0</div></div>
+  </aside>
+  <div class="principal">
+    <header class="topbar">
+      <button class="icon-btn solo-movil" id="btnMenu" aria-label="Abrir el menú"></button>
+      <div class="migas" id="migas"></div>
+      <div class="tb-acciones" style="margin-left:auto">
+        <button class="tb-usuario" id="btnUsuario" aria-label="Mi cuenta"><span class="avatar" id="avatar"></span><span class="tb-u-txt"><b id="yoNombre">Administrador</b><small id="yo"></small></span></button>
+      </div>
+    </header>
+    <main id="contenido"></main>
+  </div>
+</div>
+<div class="velo hidden" id="velo"></div>
+<div id="modales"></div>
+
+<script>
+const PRODUCTO = 'Inventario Tienda';
+const SUPABASE_URL = 'https://iibwvxuchcoeyzrmocju.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_fUlURD_H_Tzg5TY1LFp6Ew_nn1pfOMB';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const URL_APP = location.href.split('#')[0].split('?')[0].replace(/admin\.html$/, '');
+
+/* =====================================================================
+   UTILIDADES
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pesos = n => '$' + Math.round(Number(n || 0)).toLocaleString('es-CO');
+const correoValido = e => /^\S+@\S+\.\S+$/.test(e);
+const aFecha = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const fechaCorta = f => f ? new Date(String(f).length === 10 ? f + 'T00:00:00' : f).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+const diasHasta = f => Math.round((new Date(f + 'T00:00:00') - new Date(aFecha(new Date()) + 'T00:00:00')) / 864e5);
+const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+const hace = f => {
+  if (!f) return 'Nunca ha entrado';
+  const m = Math.round((Date.now() - new Date(f)) / 60000);
+  if (m < 2) return 'Hace un momento'; if (m < 60) return `Hace ${m} min`;
+  const h = Math.round(m / 60); if (h < 24) return `Hace ${h} h`;
+  const d = Math.round(h / 24); return d < 30 ? `Hace ${plural(d, 'día', 'días')}` : fechaCorta(f);
+};
+const iniciales = n => String(n || '?').trim().split(/\s+/).slice(0, 2).map(x => x[0] || '').join('').toUpperCase();
+const generarClave = () => { const c = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'; const a = crypto.getRandomValues(new Uint32Array(10)); return Array.from(a, x => c[x % c.length]).join(''); };
+const telWa = t => { let d = String(t || '').replace(/\D/g, ''); if (d.length === 10 && d.startsWith('3')) d = '57' + d; return d; };
+const guardarLocal = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+const PLANES = {
+  basico: { n: 'Básico', d: 'Ventas, inventario, caja, fiados y reportes.' },
+  facturacion: { n: 'Facturación electrónica', c: 'Facturación', d: 'Todo lo del plan Básico más facturación electrónica ante la DIAN.' },
+  pro: { n: 'Pro', d: 'Todo lo anterior con soporte prioritario y acompañamiento.' },
+  personalizado: { n: 'Personalizado', d: 'Condiciones acordadas con la tienda.' },
+};
+const REGIMENES = ['Responsable de IVA', 'No responsable de IVA', 'Régimen simple de tributación', 'Gran contribuyente'];
+const RESPONSABILIDADES = { 'R-99-PN': 'No responsable (R-99-PN)', 'O-13': 'Gran contribuyente (O-13)', 'O-15': 'Autorretenedor (O-15)', 'O-23': 'Agente de retención de IVA (O-23)', 'O-47': 'Régimen simple de tributación (O-47)' };
+const MEDIOS_SUS = { transferencia: 'Transferencia', nequi: 'Nequi', daviplata: 'Daviplata', efectivo: 'Efectivo', tarjeta: 'Tarjeta' };
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+const ICONOS = {
+  resumen: '<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/>',
+  softwares: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  empresa: '<path d="M4 21V5a2 2 0 012-2h8a2 2 0 012 2v16"/><path d="M16 9h2a2 2 0 012 2v10"/><path d="M2 21h20"/><path d="M8 7h4M8 11h4M8 15h4"/>',
+  tiendas: '<path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v2a3 3 0 01-6 0 3 3 0 01-6 0 3 3 0 01-6 0V9z"/><path d="M5 13v8h14v-8"/>',
+  pagos: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/>',
+  usuarios: '<circle cx="9" cy="8" r="3.5"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M16 4.5a3.5 3.5 0 010 7"/><path d="M18 15c2.5.6 4 2.5 4 6"/>',
+  escudo: '<path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/>',
+  salir: '<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
+  mas: '<path d="M12 5v14M5 12h14"/>',
+  menu: '<path d="M3 6h18M3 12h18M3 18h18"/>',
+  chevron: '<path d="M9 6l6 6-6 6"/>',
+  atras: '<path d="M15 6l-6 6 6 6"/>',
+  whatsapp: '<path d="M3 21l1.6-4.7A8.5 8.5 0 1112 20.5a8.4 8.4 0 01-4.3-1.2L3 21z"/>',
+  sol: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  luna: '<path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/>',
+  check: '<path d="M20 6L9 17l-5-5"/>',
+  reloj: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  enlace: '<path d="M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7l1.7-1.7"/>',
+};
+const ico = n => `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONOS[n] || ''}</svg>`;
+const vacioBloque = (i, t) => `<div class="vacio-bloque">${ico(i)}<div>${t}</div></div>`;
+const tablaSimple = (cab, filas, vacio = 'Sin datos.') => `<div class="tabla-wrap"><table><thead><tr>${cab}</tr></thead><tbody>${filas || `<tr><td colspan="12" class="vacio">${vacio}</td></tr>`}</tbody></table></div>`;
+function barrasH(filas) {
+  const max = Math.max(1, ...filas.map(f => f.valor));
+  return `<div class="barras-h">${filas.map(f => `<div class="fila-b" title="${esc(f.etiqueta)}"><span>${esc(f.etiqueta)}</span><div class="pista"><i style="width:${Math.max(f.valor / max * 100, f.valor > 0 ? 1.5 : 0)}%"></i></div><span>${f.texto}</span></div>`).join('')}</div>`;
+}
+
+function aviso(t, tipo = '') {
+  const el = document.createElement('div'); el.className = 'toast ' + tipo; el.textContent = t;
+  $('toasts').appendChild(el); setTimeout(() => el.remove(), tipo === 'error' ? 6000 : 3500);
+}
+const errorTexto = e => {
+  const m = e?.message || String(e);
+  if (/Failed to send a request|FunctionsFetchError|404/i.test(m)) return 'La función "quick-handler" no está instalada en Supabase. Revisa el paso de instalación.';
+  if (/duplicate key|23505/.test(m)) return 'Ese correo ya está registrado.';
+  if (/row-level security|permission denied/.test(m)) return 'No tienes permiso para hacer esto.';
+  if (/tienda_softwares|softwares|plataforma|razon_social|p_software/.test(m) && /does not exist|Could not find|schema cache/i.test(m)) return 'Falta ejecutar la migración V7 en Supabase.';
+  if (/admin_registrar_pago|suscripcion_pagos|plan|proximo_pago/.test(m) && /does not exist|Could not find/i.test(m)) return 'Falta ejecutar la migración V6 en Supabase.';
+  return m;
+};
+
+const pila = [];
+function abrirModal(html, alCerrar, ancho = false) {
+  const fondo = document.createElement('div');
+  fondo.className = 'modal-fondo';
+  fondo.innerHTML = `<div class="modal ${ancho ? 'ancho' : ''}">${html}</div>`;
+  $('modales').appendChild(fondo);
+  const m = { el: fondo.firstElementChild, cerrar: () => { if (!fondo.isConnected) return; fondo.remove(); pila.splice(pila.indexOf(m), 1); alCerrar && alCerrar(); } };
+  pila.push(m);
+  fondo.addEventListener('mousedown', e => { if (e.target === fondo) m.cerrar(); });
+  m.el.querySelectorAll('[data-cerrar]').forEach(b => b.onclick = m.cerrar);
+  setTimeout(() => m.el.querySelector('[autofocus]')?.focus(), 30);
+  return m;
+}
+function confirmar(titulo, texto, ok = 'Aceptar', peligro = false) {
+  return new Promise(res => {
+    let r = false;
+    const m = abrirModal(`<h2>${esc(titulo)}</h2><p class="muted" style="white-space:pre-line">${esc(texto)}</p>
+      <div class="modal-acciones"><button class="btn" data-cerrar>Cancelar</button><button class="btn ${peligro ? 'btn-danger' : 'btn-primary'}" id="cOk" autofocus>${esc(ok)}</button></div>`, () => res(r));
+    m.el.querySelector('#cOk').onclick = () => { r = true; m.cerrar(); };
+  });
+}
+let popActual = null;
+function menuPop(ancla, html, ancho = 280) {
+  popActual?.cerrar();
+  const pop = document.createElement('div');
+  pop.className = 'menu-pop'; pop.style.width = Math.min(ancho, innerWidth - 16) + 'px'; pop.innerHTML = html;
+  document.body.appendChild(pop);
+  const r = ancla.getBoundingClientRect();
+  pop.style.left = Math.max(8, Math.min(r.right - pop.offsetWidth, innerWidth - pop.offsetWidth - 8)) + 'px';
+  pop.style.top = (r.bottom + 6) + 'px';
+  const fuera = e => { if (!pop.contains(e.target) && !ancla.contains(e.target)) cerrar(); };
+  const cerrar = () => { pop.remove(); document.removeEventListener('mousedown', fuera); popActual = null; };
+  setTimeout(() => document.addEventListener('mousedown', fuera), 0);
+  return popActual = { pop, cerrar };
+}
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (popActual) return popActual.cerrar();
+  if (pila.length) return pila.at(-1).cerrar();
+  cerrarMenu();
+});
+
+// Llamar la función segura de cuentas y facturación
+async function cuentas(cuerpo) {
+  const { data, error } = await db.functions.invoke('quick-handler', { body: cuerpo });
+  if (error) {
+    let m = error.message;
+    try { const j = await error.context.json(); if (j?.error) m = j.error; } catch (e) {}
+    throw new Error(m);
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
+/* =====================================================================
+   ESTADO, INGRESO Y NAVEGACIÓN
+   ===================================================================== */
+let yo = null, tiendas = [], vista = 'resumen';
+const VISTAS = {
+  resumen: { t: 'Resumen', g: 'Negocio', f: () => verResumen() },
+  tiendas: { t: 'Empresas', g: 'Negocio', f: () => verTiendas() },
+  pagos: { t: 'Pagos', g: 'Negocio', f: () => verPagos() },
+  softwares: { t: 'Softwares', g: 'Plataforma', f: () => verSoftwares() },
+  empresa: { t: 'Mi empresa', g: 'Plataforma', f: () => verMiEmpresa() },
+  usuarios: { t: 'Usuarios', g: 'Accesos', f: () => verUsuarios() },
+};
+$('logoLogin').innerHTML = ico('escudo'); $('logoPanel').innerHTML = ico('escudo');
+$('btnMenu').innerHTML = ico('menu');
+$('btnMenu').onclick = () => { $('menu').classList.add('abierto'); $('velo').classList.remove('hidden'); };
+$('velo').onclick = cerrarMenu;
+function cerrarMenu() { $('menu').classList.remove('abierto'); $('velo').classList.add('hidden'); }
+$('nav').innerHTML = [...new Set(Object.values(VISTAS).map(v => v.g))].map(g => `<div class="nav-grupo">${g}</div>` +
+  Object.entries(VISTAS).filter(([, v]) => v.g === g).map(([k, v]) => `<button class="nav-btn" data-vista="${k}">${ico(k)}<span>${v.t}</span></button>`).join('')).join('');
+$('nav').querySelectorAll('[data-vista]').forEach(b => b.onclick = () => ir(b.dataset.vista));
+$('btnUsuario').onclick = () => {
+  const oscuro = document.documentElement.dataset.theme === 'dark';
+  const p = menuPop($('btnUsuario'), `<div class="mp-cab"><b>Administrador</b><span class="small muted" style="display:block">${esc(yo?.email || '')}</span></div>
+    <button class="menu-item" data-a="app">${ico('enlace')}<span>Abrir la app de las tiendas</span></button>
+    <button class="menu-item" data-a="tema">${ico(oscuro ? 'sol' : 'luna')}<span>${oscuro ? 'Usar modo claro' : 'Usar modo oscuro'}</span></button>
+    <button class="menu-item" data-a="salir">${ico('salir')}<span>Cerrar sesión</span></button>`);
+  p.pop.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => {
+    p.cerrar();
+    if (b.dataset.a === 'app') window.open(URL_APP, '_blank');
+    if (b.dataset.a === 'tema') { const t = oscuro ? 'light' : 'dark'; document.documentElement.dataset.theme = t; guardarLocal('tema', t); }
+    if (b.dataset.a === 'salir') { await db.auth.signOut(); location.reload(); }
+  });
+};
+
+$('fLogin').onsubmit = async e => {
+  e.preventDefault();
+  $('lMsg').className = 'msg'; $('lMsg').textContent = 'Verificando…'; $('bEntrar').disabled = true;
+  const { error } = await db.auth.signInWithPassword({ email: $('lEmail').value.trim(), password: $('lClave').value });
+  $('bEntrar').disabled = false;
+  if (error) { $('lMsg').className = 'msg error'; $('lMsg').textContent = 'Correo o contraseña incorrectos.'; return; }
+  iniciar();
+};
+
+async function iniciar() {
+  const { data: { session } } = await db.auth.getSession();
+  if (!session) { $('vLogin').classList.remove('hidden'); $('vPanel').classList.add('hidden'); setTimeout(() => $('lEmail').focus(), 30); return; }
+  const { data: adm } = await db.from('administradores').select('user_id').eq('user_id', session.user.id).maybeSingle();
+  if (!adm) {
+    await db.auth.signOut();
+    $('vLogin').classList.remove('hidden');
+    $('lMsg').className = 'msg error'; $('lMsg').textContent = 'Esta cuenta no es de administrador.';
+    return;
+  }
+  yo = session.user;
+  $('yo').textContent = yo.email;
+  $('avatar').textContent = iniciales(yo.email.split('@')[0].replace(/[._-]+/g, ' '));
+  $('vLogin').classList.add('hidden'); $('vPanel').classList.remove('hidden');
+  ir('resumen');
+}
+
+function ir(v, migaExtra = '') {
+  vista = v;
+  $('nav').querySelectorAll('[data-vista]').forEach(b => b.classList.toggle('activa', b.dataset.vista === v));
+  $('migas').innerHTML = `<span class="grupo-miga">${VISTAS[v].g}</span><span class="grupo-miga">${ico('chevron')}</span><b>${VISTAS[v].t}</b>${migaExtra}`;
+  cerrarMenu(); popActual?.cerrar(); window.scrollTo(0, 0);
+  if (!migaExtra) VISTAS[v].f();
+}
+const encabezado = (t, sub, acc = '') => `<div class="encabezado"><div><h1>${t}</h1>${sub ? `<p>${sub}</p>` : ''}</div>${acc ? `<div class="row">${acc}</div>` : ''}</div>`;
+async function cargarTiendas() {
+  const { data, error } = await db.rpc('admin_tiendas');
+  if (error) throw error;
+  tiendas = data || [];
+}
+let softwares = [];
+async function cargarSoftwares() {
+  const { data, error } = await db.from('softwares').select('*').order('orden').order('nombre');
+  if (error) throw error;
+  softwares = data || [];
+}
+const nombreSw = c => softwares.find(s => s.codigo === c)?.nombre || c;
+// Todas las suscripciones (empresa + software) a partir de la lista de empresas
+const suscripciones = () => tiendas.flatMap(t => (t.softwares || []).map(s => ({ ...s, tienda: t })));
+const estadoSus = s => {
+  if (s.tienda?.estado && s.tienda.estado !== 'activa') return '<span class="badge neutro">Empresa suspendida</span>';
+  if (s.estado && s.estado !== 'activo') return '<span class="badge neutro">Software suspendido</span>';
+  if (!s.proximo_pago) return '<span class="badge neutro">Sin fecha</span>';
+  const d = diasHasta(s.proximo_pago);
+  return d < 0 ? `<span class="badge bajo">Vencido hace ${plural(-d, 'día', 'días')}</span>` : d === 0 ? '<span class="badge aviso">Vence hoy</span>' : d <= 5 ? `<span class="badge aviso">Vence en ${plural(d, 'día', 'días')}</span>` : '<span class="badge ok">Al día</span>';
+};
+function recordarPago(s) {
+  const t = s.tienda;
+  if (!t.telefono) return aviso('Esta empresa no tiene teléfono. Agrégalo en sus datos.', 'error');
+  const d = diasHasta(s.proximo_pago || aFecha(new Date()));
+  const texto = `Hola, te saludamos de ${PRODUCTO}. ${d < 0 ? 'El pago' : 'Te recordamos que el pago'} de ${nombreSw(s.software)} para ${t.nombre} (plan ${PLANES[s.plan]?.n || 'Básico'}) por ${pesos(s.valor_mensual)} ${d < 0 ? 'venció el' : 'vence el'} ${fechaCorta(s.proximo_pago)}. ¡Gracias por confiar en nosotros!`;
+  window.open(`https://wa.me/${telWa(t.telefono)}?text=${encodeURIComponent(texto)}`, '_blank');
+}
+
+/* =====================================================================
+   RESUMEN DEL NEGOCIO
+   ===================================================================== */
+async function verResumen() {
+  $('contenido').innerHTML = encabezado('Resumen del negocio', new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).replace(/^./, c => c.toUpperCase()),
+    `<button class="btn btn-primary" id="bNueva">${ico('mas')}Nueva empresa</button>`) + `<div id="cuerpo"><div class="kpis"><div class="kpi"><span>Cargando…</span><strong>&nbsp;</strong></div></div></div>`;
+  $('bNueva').onclick = modalNuevaTienda;
+  let pagos = [];
+  try {
+    await Promise.all([cargarTiendas(), cargarSoftwares()]);
+    const ini = new Date(); ini.setDate(1);
+    const r = await db.from('suscripcion_pagos').select('*').gte('fecha', aFecha(new Date(ini.getFullYear(), ini.getMonth() - 5, 1))).order('fecha', { ascending: false });
+    pagos = r.data || [];
+  } catch (e) { $('cuerpo').innerHTML = vacioBloque('escudo', esc(errorTexto(e))); return; }
+  const act = tiendas.filter(t => t.estado === 'activa');
+  const vivas = suscripciones().filter(s => s.estado === 'activo' && s.tienda.estado === 'activa');
+  const mrr = vivas.reduce((t, s) => t + Number(s.valor_mensual || 0), 0);
+  const mesActual = aFecha(new Date()).slice(0, 7);
+  const delMes = pagos.filter(p => p.fecha.slice(0, 7) === mesActual);
+  const cobradoMes = delMes.reduce((t, p) => t + Number(p.valor), 0);
+  const vencidas = vivas.filter(s => s.proximo_pago && diasHasta(s.proximo_pago) < 0);
+  const proximas = vivas.filter(s => s.proximo_pago && diasHasta(s.proximo_pago) <= 10).sort((a, b) => a.proximo_pago.localeCompare(b.proximo_pago));
+  const porSw = {};
+  vivas.forEach(s => { (porSw[s.software] ||= { n: 0, v: 0 }); porSw[s.software].n++; porSw[s.software].v += Number(s.valor_mensual || 0); });
+  const meses = Array.from({ length: 6 }, (_, i) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 5 + i); return { k: aFecha(d).slice(0, 7), n: MESES[d.getMonth()], v: 0 }; });
+  pagos.forEach(p => { const m = meses.find(x => x.k === p.fecha.slice(0, 7)); if (m) m.v += Number(p.valor); });
+  const nombreT = id => tiendas.find(t => t.id === id)?.nombre || 'Empresa';
+  $('cuerpo').innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><span>Ingreso mensual recurrente</span><strong>${pesos(mrr)}</strong><small>Todas las suscripciones activas</small></div>
+      <div class="kpi bueno"><span>Cobrado este mes</span><strong>${pesos(cobradoMes)}</strong><small>${plural(delMes.length, 'pago registrado', 'pagos registrados')}</small></div>
+      <div class="kpi"><span>Empresas activas</span><strong>${act.length}</strong><small>de ${tiendas.length} en total</small></div>
+      <div class="kpi"><span>Suscripciones activas</span><strong>${vivas.length}</strong><small>${plural(softwares.filter(s => s.activo).length, 'software en el catálogo', 'softwares en el catálogo')}</small></div>
+      <div class="kpi ${vencidas.length ? 'alerta' : ''}"><span>Pagos vencidos</span><strong>${vencidas.length}</strong><small>${pesos(vencidas.reduce((t, s) => t + Number(s.valor_mensual || 0), 0))} por cobrar</small></div>
+    </div>
+    <div class="col-ancha">
+      <div class="panel"><div class="panel-cab"><div><h2>Próximos cobros</h2><p class="sub">Vencidos y los que vencen en los próximos 10 días, por software</p></div><button class="link" id="verPagos">Ver pagos</button></div>
+        ${proximas.length ? `<div class="tabla-wrap"><table><tbody>${proximas.map((s, i) => `<tr>
+          <td><b>${esc(s.tienda.nombre)}</b><br><span class="small muted">${esc(nombreSw(s.software))}, ${esc(PLANES[s.plan]?.n || s.plan)}, ${pesos(s.valor_mensual)} al mes</span></td>
+          <td>${fechaCorta(s.proximo_pago)}<br>${estadoSus(s)}</td>
+          <td class="acciones"><button class="link" data-pagar="${i}">Registrar pago</button>${s.tienda.telefono ? `<button class="link" data-recordar="${i}">${ico('whatsapp')}Recordar</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`
+          : vacioBloque('check', 'No hay cobros vencidos ni próximos a vencer.')}
+      </div>
+      <div class="panel"><h2>Ingreso por software</h2><p class="sub">Valor mensual de las suscripciones activas</p>
+        ${Object.keys(porSw).length ? barrasH(Object.entries(porSw).sort((a, b) => b[1].v - a[1].v).map(([k, x]) => ({ etiqueta: `${nombreSw(k)} (${x.n})`, valor: x.v, texto: pesos(x.v) }))) : vacioBloque('softwares', 'Aún no hay suscripciones activas.')}</div>
+    </div>
+    <div class="dos-col" style="margin-top:16px">
+      <div class="panel"><h2>Cobrado por mes</h2><p class="sub">Pagos registrados en los últimos 6 meses</p>${barrasH(meses.map(m => ({ etiqueta: m.n.charAt(0).toUpperCase() + m.n.slice(1), valor: m.v, texto: pesos(m.v) })))}</div>
+      <div class="panel"><h2>Últimos pagos recibidos</h2><p class="sub">Los 6 más recientes</p>
+        ${pagos.length ? `<div class="tabla-wrap"><table><tbody>${pagos.slice(0, 6).map(p => `<tr><td><b>${esc(nombreT(p.tienda_id))}</b><br><span class="small muted">${esc(nombreSw(p.software || 'inventario'))}, ${fechaCorta(p.fecha)}, ${esc(MEDIOS_SUS[p.medio] || p.medio || '')}</span></td><td class="num"><b>${pesos(p.valor)}</b></td></tr>`).join('')}</tbody></table></div>` : vacioBloque('pagos', 'Aún no has registrado pagos.')}</div>
+    </div>`;
+  $('verPagos').onclick = () => ir('pagos');
+  $('cuerpo').querySelectorAll('[data-pagar]').forEach(b => b.onclick = () => modalPago(proximas[+b.dataset.pagar], () => verResumen()));
+  $('cuerpo').querySelectorAll('[data-recordar]').forEach(b => b.onclick = () => recordarPago(proximas[+b.dataset.recordar]));
+}
+
+/* =====================================================================
+   EMPRESAS CLIENTES
+   ===================================================================== */
+async function verTiendas() {
+  $('contenido').innerHTML = encabezado('Empresas', 'Las empresas que usan tus softwares', `<button class="btn btn-primary" id="bNueva">${ico('mas')}Nueva empresa</button>`) +
+    `<div class="filtros"><input type="search" id="fTexto" placeholder="Buscar empresa, NIT o dueño…"><select id="fSw"><option value="">Todos los softwares</option></select>
+      <select id="fEstado"><option value="">Todas</option><option value="activa">Activas</option><option value="suspendida">Suspendidas</option><option value="vencida">Con pago vencido</option></select></div>
+    <div id="cuerpo" class="muted">Cargando…</div>`;
+  $('bNueva').onclick = modalNuevaTienda;
+  try { await Promise.all([cargarTiendas(), cargarSoftwares()]); } catch (e) { $('cuerpo').textContent = errorTexto(e); return; }
+  $('fSw').innerHTML += softwares.map(s => `<option value="${esc(s.codigo)}">${esc(s.nombre)}</option>`).join('');
+  const pintar = () => {
+    const q = $('fTexto').value.trim().toLowerCase(), sw = $('fSw').value, es = $('fEstado').value;
+    const lista = tiendas.filter(t => (!q || t.nombre.toLowerCase().includes(q) || (t.dueno || '').includes(q) || (t.nit || '').includes(q)) &&
+      (!sw || (t.softwares || []).some(s => s.software === sw)) &&
+      (!es || (es === 'vencida' ? t.estado === 'activa' && (t.softwares || []).some(s => s.estado === 'activo' && s.proximo_pago && diasHasta(s.proximo_pago) < 0) : t.estado === es)));
+    $('cuerpo').className = '';
+    $('cuerpo').innerHTML = tablaSimple('<th>Empresa</th><th>Dueño</th><th>Softwares</th><th class="num">Valor mensual</th><th>Próximo pago</th><th class="num">Usuarios</th><th>FE</th>',
+      lista.map(t => {
+        const subs = (t.softwares || []).filter(s => s.estado === 'activo');
+        const prox = subs.filter(s => s.proximo_pago).sort((a, b) => a.proximo_pago.localeCompare(b.proximo_pago))[0];
+        return `<tr class="clic" data-id="${t.id}">
+        <td><b>${esc(t.nombre)}</b><br><span class="small muted">${t.nit ? 'NIT ' + esc(t.nit) : 'Cliente desde ' + fechaCorta(t.creado_en)}</span>${t.estado !== 'activa' ? ' <span class="badge no">Suspendida</span>' : ''}</td>
+        <td class="small">${t.dueno ? esc(t.dueno) : '<span class="badge aviso">Sin dueño</span>'}</td>
+        <td>${(t.softwares || []).map(s => `<span class="badge ${s.estado === 'activo' ? 'dueno' : 'neutro'}" style="margin:2px 4px 2px 0">${esc(nombreSw(s.software))}</span>`).join('') || '<span class="muted small">Ninguno</span>'}</td>
+        <td class="num">${pesos(subs.reduce((x, s) => x + Number(s.valor_mensual || 0), 0))}</td>
+        <td>${prox ? fechaCorta(prox.proximo_pago) + '<br>' + estadoSus({ ...prox, tienda: t }) : '<span class="muted small">Sin fecha</span>'}</td>
+        <td class="num">${t.usuarios}</td>
+        <td>${t.fe_activa ? '<span class="badge ok">Activa</span>' : '<span class="badge neutro">No</span>'}</td></tr>`;
+      }).join(''),
+      tiendas.length ? 'Ninguna empresa coincide con el filtro.' : 'Aún no hay empresas. Crea la primera con "Nueva empresa".');
+    $('cuerpo').querySelectorAll('[data-id]').forEach(r => r.onclick = () => verTienda(Number(r.dataset.id)));
+  };
+  $('fTexto').oninput = pintar; $('fSw').onchange = pintar; $('fEstado').onchange = pintar;
+  pintar();
+}
+
+const camposFiscales = (t = {}) => `
+  <div class="grid2">
+    <div><label for="eNombre">Nombre comercial</label><input id="eNombre" value="${esc(t.nombre || '')}" placeholder="Ej: Minimercado La Esquina"></div>
+    <div><label for="eRazon">Razón social</label><input id="eRazon" value="${esc(t.razon_social || '')}" placeholder="Como aparece en el RUT"></div>
+    <div><label for="eTipo">Tipo de persona</label><select id="eTipo"><option value="1" ${t.tipo_persona !== '2' ? 'selected' : ''}>Persona jurídica (empresa)</option><option value="2" ${t.tipo_persona === '2' ? 'selected' : ''}>Persona natural</option></select></div>
+    <div class="grid2" style="gap:0 10px;grid-template-columns:minmax(0,1fr) 80px"><div><label for="eNit">NIT o cédula</label><input id="eNit" value="${esc(t.nit || '')}" placeholder="Sin dígito de verificación"></div><div><label for="eDv">DV</label><input id="eDv" value="${esc(t.dv || '')}" maxlength="1" inputmode="numeric"></div></div>
+    <div><label for="eRegimen">Régimen</label><select id="eRegimen"><option value="">Sin definir</option>${REGIMENES.map(r => `<option ${t.regimen === r ? 'selected' : ''}>${r}</option>`).join('')}</select></div>
+    <div><label for="eResp">Responsabilidad fiscal</label><select id="eResp">${Object.entries(RESPONSABILIDADES).map(([k, v]) => `<option value="${k}" ${(t.responsabilidad || 'R-99-PN') === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+    <div><label for="eCiiu">Actividad económica (CIIU)</label><input id="eCiiu" value="${esc(t.actividad_economica || '')}" placeholder="Ej: 4711"></div>
+    <div><label for="eCorreo">Correo de facturación</label><input type="email" id="eCorreo" value="${esc(t.correo || '')}"></div>
+    <div><label for="eDir">Dirección</label><input id="eDir" value="${esc(t.direccion || '')}"></div>
+    <div><label for="eTel">Teléfono (WhatsApp)</label><input id="eTel" value="${esc(t.telefono || '')}" inputmode="tel"></div>
+    <div><label for="eMun">Municipio</label><input id="eMun" value="${esc(t.municipio || '')}"></div>
+    <div><label for="eDep">Departamento</label><input id="eDep" value="${esc(t.departamento || '')}"></div>
+  </div>`;
+const leerFiscales = el => ({
+  nombre: el('#eNombre').value.trim(), razon_social: el('#eRazon').value.trim() || null, tipo_persona: el('#eTipo').value,
+  nit: el('#eNit').value.replace(/[^\d]/g, '') || null, dv: el('#eDv').value.trim() || null, regimen: el('#eRegimen').value || null,
+  responsabilidad: el('#eResp').value, actividad_economica: el('#eCiiu').value.trim() || null, correo: el('#eCorreo').value.trim().toLowerCase() || null,
+  direccion: el('#eDir').value.trim() || null, telefono: el('#eTel').value.trim() || null, municipio: el('#eMun').value.trim() || null, departamento: el('#eDep').value.trim() || null,
+});
+
+async function modalNuevaTienda() {
+  try { await cargarSoftwares(); } catch (e) { return aviso(errorTexto(e), 'error'); }
+  const clave = generarClave();
+  const prox = new Date(); prox.setMonth(prox.getMonth() + 1);
+  const m = abrirModal(`
+    <h2>Nueva empresa</h2><p class="muted">Crea la empresa, el software que contrata y la cuenta de su dueño en un solo paso.</p>
+    <div class="seccion-modal" style="margin-top:8px;border-top:0;padding-top:0">Datos de la empresa</div>
+    ${camposFiscales()}
+    <div class="seccion-modal">Software y cobro</div>
+    <div class="grid2">
+      <div><label for="tSw">Software</label><select id="tSw">${softwares.filter(s => s.activo).map(s => `<option value="${esc(s.codigo)}">${esc(s.nombre)}</option>`).join('')}</select></div>
+      <div><label for="tPlan">Plan</label><select id="tPlan">${Object.entries(PLANES).map(([k, p]) => `<option value="${k}">${p.n}</option>`).join('')}</select></div>
+      <div><label for="tValor">Valor mensual</label><input type="number" id="tValor" min="0" step="1000" placeholder="$0"></div>
+      <div><label for="tProx">Primer cobro</label><input type="date" id="tProx" value="${aFecha(prox)}"></div>
+    </div>
+    <div class="seccion-modal">Cuenta del dueño</div>
+    <div class="grid2">
+      <div><label for="dNombre">Nombre</label><input id="dNombre" placeholder="Nombre y apellido"></div>
+      <div><label for="dEmail">Correo</label><input type="email" id="dEmail" placeholder="dueno@correo.com"></div>
+    </div>
+    <label for="dClave">Contraseña inicial</label>
+    <div class="clave"><input id="dClave" value="${clave}"><button class="btn" id="dGen" type="button">Generar otra</button></div>
+    <div class="modal-acciones"><button class="btn" data-cerrar>Cancelar</button><button class="btn btn-primary" id="tCrear">Crear empresa</button></div>`, null, true);
+  const el = s => m.el.querySelector(s);
+  el('#eNombre').focus();
+  el('#dGen').onclick = () => el('#dClave').value = generarClave();
+  el('#tCrear').onclick = async () => {
+    const t = leerFiscales(el);
+    const sus = { software: el('#tSw').value, plan: el('#tPlan').value, valor_mensual: Number(el('#tValor').value || 0), proximo_pago: el('#tProx').value || null };
+    const d = { nombre: el('#dNombre').value.trim(), email: el('#dEmail').value.trim().toLowerCase(), password: el('#dClave').value.trim() };
+    if (!t.nombre) return aviso('Escribe el nombre comercial de la empresa.', 'error');
+    if (!sus.software) return aviso('Crea primero un software en el catálogo.', 'error');
+    if (!d.nombre || !correoValido(d.email)) return aviso('Escribe el nombre y un correo válido del dueño.', 'error');
+    if (d.password.length < 6) return aviso('La contraseña debe tener mínimo 6 caracteres.', 'error');
+    el('#tCrear').disabled = true; el('#tCrear').textContent = 'Creando…';
+    const { data: id, error } = await db.rpc('admin_crear_tienda', { p_nombre: t.nombre, p_email: d.email });
+    if (error) { el('#tCrear').disabled = false; el('#tCrear').textContent = 'Crear empresa'; return aviso(errorTexto(error), 'error'); }
+    const r1 = await db.from('tiendas').update(t).eq('id', id);
+    const r2 = await db.from('tienda_softwares').upsert({ tienda_id: id, ...sus });
+    if (r1.error || r2.error) aviso('La empresa se creó, pero faltó guardar algunos datos: ' + errorTexto(r1.error || r2.error), 'error');
+    try {
+      await cuentas({ accion: 'crear', tienda_id: id, rol: 'dueno', softwares: [sus.software], ...d });
+      m.cerrar();
+      mostrarCredenciales(d.nombre, d.email, d.password, t.nombre, sus.software);
+    } catch (e) {
+      m.cerrar();
+      aviso(`La empresa se creó, pero la cuenta del dueño no: ${errorTexto(e)}`, 'error');
+    }
+    verTienda(id);
+  };
+}
+
+async function verTienda(id) {
+  ir('tiendas', `<span class="grupo-miga">${ico('chevron')}</span><b>Ficha</b>`);
+  $('contenido').innerHTML = '<p class="muted">Cargando…</p>';
+  const [{ data: t, error }, pagosR, subsR] = await Promise.all([
+    db.from('tiendas').select('*').eq('id', id).single(),
+    db.from('suscripcion_pagos').select('*').eq('tienda_id', id).order('fecha', { ascending: false }),
+    db.from('tienda_softwares').select('*').eq('tienda_id', id).order('software'),
+    cargarSoftwares().catch(() => {}),
+  ]);
+  if (error) { $('contenido').textContent = errorTexto(error); return; }
+  const ordenSw = c => softwares.find(x => x.codigo === c)?.orden ?? 999;
+  const pagos = pagosR.data || [], subs = (subsR.data || []).map(s => ({ ...s, tienda: t })).sort((a, b) => ordenSw(a.software) - ordenSw(b.software));
+  const activa = t.estado === 'activa';
+  const libres = softwares.filter(s => s.activo && !subs.some(x => x.software === s.codigo));
+  $('contenido').innerHTML = `
+    <button class="link volver" id="bVolver">${ico('atras')}Todas las empresas</button>
+    ${encabezado(`${esc(t.nombre)} <span class="badge ${activa ? 'ok' : 'no'}" style="vertical-align:middle;margin-left:6px;font-size:.8rem">${activa ? 'Activa' : 'Suspendida'}</span>`, `${t.nit ? 'NIT ' + esc(t.nit) + (t.dv ? '-' + esc(t.dv) : '') + '. ' : ''}Cliente desde ${fechaCorta(t.creado_en)}`,
+      `<button class="btn ${activa ? 'btn-danger' : 'btn-primary'}" id="bEstado">${activa ? 'Suspender empresa' : 'Reactivar empresa'}</button>`)}
+    <div class="dos-col">
+      <div class="panel"><h2>Datos de la empresa</h2><p class="sub">Es quien emite las facturas: estos datos salen en el tiquete y en la factura electrónica. Solo tú puedes cambiarlos.</p>
+        ${camposFiscales(t)}
+        <p class="small muted" style="margin:10px 0 0">Deben coincidir con el RUT y con los datos de la empresa registrados en Factus.</p>
+        <div class="modal-acciones" style="margin-top:12px"><button class="btn btn-primary" id="bGuardar">Guardar datos</button></div>
+      </div>
+      <div class="panel" style="align-self:start"><div class="panel-cab"><div><h2>Softwares contratados</h2><p class="sub">Plan, valor y fecha de cobro de cada software</p></div>${libres.length ? `<button class="btn btn-sm" id="bAddSw">${ico('mas')}Agregar software</button>` : ''}</div>
+        ${subs.length ? subs.map((s, i) => `<div class="sus-fila" data-i="${i}">
+          <div class="row" style="justify-content:space-between"><b>${esc(nombreSw(s.software))}</b><span>${estadoSus(s)}</span></div>
+          <div class="grid3">
+            <div><label>Plan</label><select data-c="plan">${Object.entries(PLANES).map(([k, p]) => `<option value="${k}" ${s.plan === k ? 'selected' : ''}>${p.n}</option>`).join('')}</select></div>
+            <div><label>Valor mensual</label><input type="number" data-c="valor_mensual" min="0" step="1000" value="${Number(s.valor_mensual || 0) || ''}" placeholder="$0"></div>
+            <div><label>Próximo pago</label><input type="date" data-c="proximo_pago" value="${s.proximo_pago || ''}"></div>
+          </div>
+          <div class="modal-acciones" style="margin-top:10px">
+            <button class="link ${s.estado === 'activo' ? 'danger' : ''}" data-a="estado">${s.estado === 'activo' ? 'Suspender este software' : 'Activar este software'}</button>
+            <button class="btn btn-sm" data-a="recordar">${ico('whatsapp')}Recordar</button>
+            <button class="btn btn-sm" data-a="pagar">${ico('pagos')}Registrar pago</button>
+            <button class="btn btn-sm btn-primary" data-a="guardar">Guardar</button>
+          </div></div>`).join('') : vacioBloque('softwares', 'Esta empresa todavía no tiene softwares contratados.')}
+      </div>
+    </div>
+    <div class="panel" style="margin-top:16px"><div class="panel-cab"><div><h2>Usuarios</h2><p class="sub">Cuentas de esta empresa y los softwares a los que entra cada una</p></div><button class="btn btn-primary btn-sm" id="bNuevoU">${ico('mas')}Nuevo usuario</button></div>
+      <div id="tablaU" class="muted">Cargando…</div></div>
+    <div class="dos-col" style="margin-top:16px">
+      <div class="panel"><div class="panel-cab"><div><h2>Facturación electrónica</h2><p class="sub">Conexión con Factus. Las credenciales quedan en una tabla protegida del servidor: ni la empresa ni esta página pueden leerlas.</p></div>
+        <label class="interruptor"><input type="checkbox" id="feActiva" ${t.fe_activa ? 'checked' : ''}><span></span>Activa</label></div>
+        <div class="grid2">
+          <div><label for="feAmbiente">Ambiente</label><select id="feAmbiente"><option value="pruebas" ${t.fe_ambiente !== 'produccion' ? 'selected' : ''}>Pruebas (sandbox)</option><option value="produccion" ${t.fe_ambiente === 'produccion' ? 'selected' : ''}>Producción (facturas reales)</option></select></div>
+          <div><label for="feRango">Rango de numeración</label><select id="feRango"><option value="">El único activo (automático)</option></select></div>
+          <div><label for="feClientId">Client ID</label><input id="feClientId" autocomplete="off"></div>
+          <div><label for="feSecret">Client Secret</label><input id="feSecret" type="password" autocomplete="new-password"></div>
+          <div><label for="feUsuario">Usuario (correo de Factus)</label><input id="feUsuario" autocomplete="off"></div>
+          <div><label for="feClave">Contraseña de Factus</label><input id="feClave" type="password" autocomplete="new-password"></div>
+        </div>
+        <p class="small muted" id="feEstado" style="margin:10px 0 0">Cargando configuración…</p>
+        <div class="modal-acciones" style="margin-top:12px"><button class="btn" id="feProbar" type="button">Probar conexión</button><button class="btn btn-primary" id="feGuardar">Guardar facturación</button></div>
+      </div>
+      <div class="panel" style="align-self:start"><h2>Historial de pagos</h2><p class="sub">Pagos de suscripción de esta empresa</p>
+        ${pagos.length ? tablaSimple('<th>Fecha</th><th>Software</th><th>Periodo</th><th class="num">Valor</th><th></th>', pagos.map(p => `<tr><td style="white-space:nowrap">${fechaCorta(p.fecha)}${p.nota ? `<br><span class="small muted" style="white-space:normal">${esc(p.nota)}</span>` : ''}</td><td>${esc(nombreSw(p.software || 'inventario'))}<br><span class="small muted">${esc(MEDIOS_SUS[p.medio] || p.medio || '')}</span></td><td style="white-space:nowrap">${esc(p.periodo || '')}</td><td class="num" style="white-space:nowrap"><b>${pesos(p.valor)}</b></td><td class="acciones"><button class="link danger" data-borrarpago="${p.id}">Eliminar</button></td></tr>`).join(''))
+          : vacioBloque('pagos', 'Aún no hay pagos registrados.')}
+      </div>
+    </div>`;
+  const el = s => $('contenido').querySelector(s);
+  $('bVolver').onclick = () => ir('tiendas');
+  $('bGuardar').onclick = async () => {
+    const datos = leerFiscales(el);
+    if (!datos.nombre) return aviso('El nombre comercial es obligatorio.', 'error');
+    if (datos.correo && !correoValido(datos.correo)) return aviso('El correo de facturación no es válido.', 'error');
+    const { error } = await db.from('tiendas').update(datos).eq('id', id);
+    if (error) return aviso(errorTexto(error), 'error');
+    aviso('Datos guardados', 'ok');
+  };
+  $('contenido').querySelectorAll('.sus-fila').forEach(f => {
+    const s = subs[+f.dataset.i];
+    const val = c => f.querySelector(`[data-c="${c}"]`).value;
+    f.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => {
+      const a = b.dataset.a;
+      if (a === 'guardar') {
+        const { error } = await db.from('tienda_softwares').update({ plan: val('plan'), valor_mensual: Number(val('valor_mensual') || 0), proximo_pago: val('proximo_pago') || null }).eq('tienda_id', id).eq('software', s.software);
+        if (error) return aviso(errorTexto(error), 'error');
+        aviso('Suscripción guardada', 'ok'); verTienda(id);
+      }
+      if (a === 'pagar') modalPago({ ...s, valor_mensual: Number(val('valor_mensual') || s.valor_mensual || 0) }, () => verTienda(id));
+      if (a === 'recordar') recordarPago({ ...s, plan: val('plan'), valor_mensual: Number(val('valor_mensual') || 0), proximo_pago: val('proximo_pago') || s.proximo_pago });
+      if (a === 'estado') {
+        const nuevo = s.estado === 'activo' ? 'suspendido' : 'activo';
+        if (nuevo === 'suspendido' && !await confirmar('Suspender software', `Nadie de "${t.nombre}" podrá entrar a ${nombreSw(s.software)} hasta que lo actives. Sus datos se conservan.`, 'Suspender', true)) return;
+        const { error } = await db.from('tienda_softwares').update({ estado: nuevo }).eq('tienda_id', id).eq('software', s.software);
+        if (error) return aviso(errorTexto(error), 'error');
+        aviso(nuevo === 'activo' ? 'Software activado' : 'Software suspendido', 'ok'); verTienda(id);
+      }
+    });
+  });
+  $('bAddSw')?.addEventListener('click', () => {
+    const prox = new Date(); prox.setMonth(prox.getMonth() + 1);
+    const m = abrirModal(`<h2>Agregar software</h2><p class="muted">${esc(t.nombre)} empezará a pagar este software desde la fecha que elijas.</p>
+      <div class="grid2">
+        <div><label for="aSw">Software</label><select id="aSw">${libres.map(s => `<option value="${esc(s.codigo)}">${esc(s.nombre)}</option>`).join('')}</select></div>
+        <div><label for="aPlan">Plan</label><select id="aPlan">${Object.entries(PLANES).map(([k, p]) => `<option value="${k}">${p.n}</option>`).join('')}</select></div>
+        <div><label for="aValor">Valor mensual</label><input type="number" id="aValor" min="0" step="1000" placeholder="$0"></div>
+        <div><label for="aProx">Primer cobro</label><input type="date" id="aProx" value="${aFecha(prox)}"></div>
+      </div>
+      <p class="small muted" style="margin:8px 0 0">Después, en Usuarios, marca este software en las cuentas que deban entrar a él.</p>
+      <div class="modal-acciones"><button class="btn" data-cerrar>Cancelar</button><button class="btn btn-primary" id="aOk">Agregar software</button></div>`);
+    m.el.querySelector('#aOk').onclick = async () => {
+      const q = s => m.el.querySelector(s).value;
+      const { error } = await db.from('tienda_softwares').insert({ tienda_id: id, software: q('#aSw'), plan: q('#aPlan'), valor_mensual: Number(q('#aValor') || 0), proximo_pago: q('#aProx') || null });
+      if (error) return aviso(errorTexto(error), 'error');
+      m.cerrar(); aviso('Software agregado', 'ok'); verTienda(id);
+    };
+  });
+  $('contenido').querySelectorAll('[data-borrarpago]').forEach(b => b.onclick = async () => {
+    const p = pagos.find(x => x.id === Number(b.dataset.borrarpago));
+    if (!await confirmar('Eliminar pago', `¿Eliminar el pago de ${pesos(p.valor)} del ${fechaCorta(p.fecha)}?\n\nLa fecha del próximo pago no cambia; ajústala a mano si hace falta.`, 'Eliminar', true)) return;
+    const { error } = await db.from('suscripcion_pagos').delete().eq('id', p.id);
+    if (error) return aviso(errorTexto(error), 'error');
+    aviso('Pago eliminado', 'ok'); verTienda(id);
+  });
+  $('bEstado').onclick = async () => {
+    const nuevo = activa ? 'suspendida' : 'activa';
+    if (nuevo === 'suspendida' && !await confirmar('Suspender empresa', `Nadie de "${t.nombre}" podrá entrar a ningún software hasta que la reactives. Sus datos se conservan.`, 'Suspender', true)) return;
+    const { error } = await db.rpc('admin_estado_tienda', { p_tienda: id, p_estado: nuevo });
+    if (error) return aviso(errorTexto(error), 'error');
+    aviso(nuevo === 'activa' ? 'Empresa reactivada' : 'Empresa suspendida', 'ok');
+    verTienda(id);
+  };
+  if (!tiendas.length) cargarTiendas().catch(() => {});
+  $('bNuevoU').onclick = () => modalUsuario(null, id, () => pintarUsuarios($('tablaU'), id));
+  pintarUsuarios($('tablaU'), id);
+  panelFacturacion(id);
+}
+
+// s = suscripción { software, plan, valor_mensual, proximo_pago, tienda: { id, nombre, ... } }
+function modalPago(s, alGuardar) {
+  const m = abrirModal(`<h2>Registrar pago</h2><p class="muted">${esc(s.tienda.nombre)}, ${esc(nombreSw(s.software))} (plan ${esc(PLANES[s.plan]?.n || s.plan || 'Básico')})${s.proximo_pago ? `. Cubre el periodo que vence el ${fechaCorta(s.proximo_pago)}` : ''}.</p>
+    <div class="grid2">
+      <div><label for="pValor">Valor recibido</label><input type="number" id="pValor" min="1" step="1000" value="${Number(s.valor_mensual || 0) || ''}" autofocus></div>
+      <div><label for="pMedio">Medio</label><select id="pMedio">${Object.entries(MEDIOS_SUS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
+    </div>
+    <label for="pNota">Nota (opcional)</label><input id="pNota" placeholder="Ej: comprobante de transferencia 4587">
+    <p class="small muted" style="margin:8px 0 0">Al registrar el pago, la fecha del próximo cobro de este software se corre un mes automáticamente.</p>
+    <div class="modal-acciones"><button class="btn" data-cerrar>Cancelar</button><button class="btn btn-primary" id="pGuardar">Registrar pago</button></div>`);
+  const el = q => m.el.querySelector(q);
+  el('#pGuardar').onclick = async () => {
+    const valor = Number(el('#pValor').value);
+    if (!(valor > 0)) return aviso('Escribe el valor recibido.', 'error');
+    el('#pGuardar').disabled = true;
+    const { data, error } = await db.rpc('admin_registrar_pago', { p_tienda: s.tienda.id, p_valor: valor, p_medio: el('#pMedio').value, p_nota: el('#pNota').value.trim() || null, p_software: s.software || 'inventario' });
+    el('#pGuardar').disabled = false;
+    if (error) return aviso(errorTexto(error), 'error');
+    m.cerrar();
+    aviso(`Pago registrado. Próximo cobro: ${fechaCorta(data)}`, 'ok');
+    alGuardar && alGuardar();
+  };
+}
+
+async function panelFacturacion(id) {
+  let cfg = {};
+  const estado = (txt, color = '') => { const e = $('feEstado'); if (e) { e.textContent = txt; e.style.color = color; } };
+  const ponerRango = (lista, sel) => {
+    $('feRango').innerHTML = '<option value="">El único activo (automático)</option>' + (lista || []).map(r => `<option value="${r.id}">${esc(r.id)}: ${esc(r.prefijo)} ${esc(r.documento)} ${r.desde !== '' ? `(${esc(r.desde)} a ${esc(r.hasta)})` : ''}${r.activo === false ? ', inactivo' : ''}</option>`).join('');
+    if (sel && ![...$('feRango').options].some(o => o.value === String(sel))) $('feRango').innerHTML += `<option value="${sel}">${sel} (guardado)</option>`;
+    $('feRango').value = sel ? String(sel) : '';
+  };
+  try {
+    cfg = await cuentas({ accion: 'fe_ver', tienda_id: id });
+    if (!$('feClientId')) return;
+    $('feClientId').value = cfg.client_id; $('feUsuario').value = cfg.usuario;
+    $('feSecret').placeholder = cfg.tiene_secreto ? '•••••• guardado (escribe para cambiarlo)' : '';
+    $('feClave').placeholder = cfg.tiene_clave ? '•••••• guardada (escribe para cambiarla)' : '';
+    ponerRango([], cfg.numbering_range_id);
+    estado(cfg.tiene_secreto && cfg.tiene_clave ? 'Credenciales guardadas. Usa "Probar conexión" para verificarlas.' : 'Aún no hay credenciales de Factus para esta tienda.');
+  } catch (e) { estado(errorTexto(e), 'var(--danger)'); }
+
+  const guardar = async (silencioso) => {
+    const { error } = await db.from('tiendas').update({ fe_activa: $('feActiva').checked, fe_ambiente: $('feAmbiente').value }).eq('id', id);
+    if (error) throw error;
+    await cuentas({ accion: 'fe_guardar', tienda_id: id, client_id: $('feClientId').value, usuario: $('feUsuario').value,
+      client_secret: $('feSecret').value, clave: $('feClave').value, numbering_range_id: $('feRango').value || null });
+    $('feSecret').value = ''; $('feClave').value = '';
+    if (!silencioso) aviso('Facturación guardada', 'ok');
+  };
+  $('feGuardar').onclick = async () => {
+    if ($('feActiva').checked && $('feAmbiente').value === 'produccion' && !await confirmar('Activar producción', 'Las facturas se enviarán a la DIAN como facturas reales. ¿Continuar?', 'Sí, producción')) return;
+    try { await guardar(); estado('Guardado.', 'var(--ok)'); } catch (e) { aviso(errorTexto(e), 'error'); }
+  };
+  $('feProbar').onclick = async () => {
+    estado('Conectando con Factus…');
+    try {
+      await guardar(true);
+      const r = await cuentas({ accion: 'fe_probar', tienda_id: id });
+      ponerRango(r.rangos, $('feRango').value || cfg.numbering_range_id);
+      estado(`Conexión correcta. Factus tiene ${plural(r.rangos.length, 'rango', 'rangos')} de numeración. Si hay más de uno, elige el de facturas y guarda.`, 'var(--ok)');
+    } catch (e) { estado(errorTexto(e), 'var(--danger)'); }
+  };
+}
+
+/* =====================================================================
+   PAGOS DE SUSCRIPCIÓN
+   ===================================================================== */
+async function verPagos() {
+  const hoy = new Date();
+  const opciones = Array.from({ length: 12 }, (_, i) => { const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1); return { k: aFecha(d).slice(0, 7), t: `${MESES[d.getMonth()]} ${d.getFullYear()}` }; });
+  $('contenido').innerHTML = encabezado('Pagos', 'Pagos de suscripción que te hacen las empresas, por software', `<button class="btn btn-primary" id="bPago">${ico('mas')}Registrar pago</button>`) +
+    `<div class="filtros"><select id="fMes"><option value="">Últimos 12 meses</option>${opciones.map(o => `<option value="${o.k}">${o.t.charAt(0).toUpperCase() + o.t.slice(1)}</option>`).join('')}</select>
+      <select id="fTienda"><option value="">Todas las empresas</option></select><select id="fSw"><option value="">Todos los softwares</option></select></div>
+    <div id="cuerpo" class="muted">Cargando…</div>`;
+  let pagos = [];
+  try {
+    await Promise.all([cargarTiendas(), cargarSoftwares()]);
+    const r = await db.from('suscripcion_pagos').select('*').gte('fecha', aFecha(new Date(hoy.getFullYear(), hoy.getMonth() - 11, 1))).order('fecha', { ascending: false });
+    if (r.error) throw r.error;
+    pagos = r.data || [];
+  } catch (e) { $('cuerpo').textContent = errorTexto(e); return; }
+  $('fTienda').innerHTML += tiendas.map(t => `<option value="${t.id}">${esc(t.nombre)}</option>`).join('');
+  $('fSw').innerHTML += softwares.map(s => `<option value="${esc(s.codigo)}">${esc(s.nombre)}</option>`).join('');
+  $('bPago').onclick = () => {
+    const subs = suscripciones();
+    if (!subs.length) return aviso('Aún no hay empresas con softwares contratados.', 'error');
+    const m = abrirModal(`<h2>Registrar pago</h2><label for="rpSus">Empresa y software</label><select id="rpSus">${subs.map((s, i) => `<option value="${i}">${esc(s.tienda.nombre)}: ${esc(nombreSw(s.software))}</option>`).join('')}</select>
+      <div class="modal-acciones"><button class="btn" data-cerrar>Cancelar</button><button class="btn btn-primary" id="rpSeguir">Continuar</button></div>`);
+    m.el.querySelector('#rpSeguir').onclick = () => { const s = subs[Number(m.el.querySelector('#rpSus').value)]; m.cerrar(); if (s) modalPago(s, () => verPagos()); };
+  };
+  const nombreT = id => tiendas.find(t => t.id === id)?.nombre || 'Empresa eliminada';
+  const pintar = () => {
+    const mes = $('fMes').value, ti = $('fTienda').value, sw = $('fSw').value;
+    const lista = pagos.filter(p => (!mes || p.fecha.slice(0, 7) === mes) && (!ti || String(p.tienda_id) === ti) && (!sw || (p.software || 'inventario') === sw));
+    const total = lista.reduce((t, p) => t + Number(p.valor), 0);
+    $('cuerpo').className = '';
+    $('cuerpo').innerHTML = `<div class="kpis"><div class="kpi bueno"><span>Total cobrado</span><strong>${pesos(total)}</strong><small>${plural(lista.length, 'pago', 'pagos')}</small></div>
+      <div class="kpi"><span>Pago promedio</span><strong>${pesos(lista.length ? total / lista.length : 0)}</strong></div>
+      <div class="kpi"><span>Empresas que pagaron</span><strong>${new Set(lista.map(p => p.tienda_id)).size}</strong></div></div>` +
+      tablaSimple('<th>Fecha</th><th>Empresa</th><th>Software</th><th>Periodo</th><th>Medio</th><th>Nota</th><th class="num">Valor</th>', lista.map(p => `<tr><td>${fechaCorta(p.fecha)}</td><td><b>${esc(nombreT(p.tienda_id))}</b></td><td>${esc(nombreSw(p.software || 'inventario'))}</td><td>${esc(p.periodo || '')}</td><td>${esc(MEDIOS_SUS[p.medio] || p.medio || '')}</td><td class="small muted">${esc(p.nota || '')}</td><td class="num"><b>${pesos(p.valor)}</b></td></tr>`).join(''), 'No hay pagos con esos filtros.');
+  };
+  $('fMes').onchange = pintar; $('fTienda').onchange = pintar; $('fSw').onchange = pintar;
+  pintar();
+}
+
+/* =====================================================================
+   PLATAFORMA: CATÁLOGO DE SOFTWARES Y TU EMPRESA
+   ===================================================================== */
+async function verSoftwares() {
+  $('contenido').innerHTML = encabezado('Softwares', 'El catálogo de productos de tu empresa. Cada empresa cliente contrata uno o varios.', `<button class="btn btn-primary" id="bNuevoSw">${ico('mas')}Nuevo software</button>`) + '<div id="cuerpo" class="muted">Cargando…</div>';
+  try { await Promise.all([cargarSoftwares(), cargarTiendas()]); } catch (e) { $('cuerpo').textContent = errorTexto(e); return; }
+  const uso = c => suscripciones().filter(s => s.software === c && s.estado === 'activo');
+  $('cuerpo').className = '';
+  $('cuerpo').innerHTML = tablaSimple('<th>Software</th><th>Código</th><th>Enlace de la app</th><th class="num">Empresas</th><th class="num">Ingreso mensual</th><th>Estado</th><th class="acciones"></th>',
+    softwares.map(s => `<tr><td><b>${esc(s.nombre)}</b><br><span class="small muted">${esc(s.descripcion || '')}</span></td><td><code>${esc(s.codigo)}</code></td>
+      <td class="small">${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.url)}</a>` : '<span class="muted">Sin enlace</span>'}</td>
+      <td class="num">${uso(s.codigo).length}</td><td class="num">${pesos(uso(s.codigo).reduce((t, x) => t + Number(x.valor_mensual || 0), 0))}</td>
+      <td>${s.activo ? '<span class="badge ok">Activo</span>' : '<span class="badge neutro">Inactivo</span>'}</td>
+      <td class="acciones"><button class="link" data-sw="${esc(s.codigo)}">Editar</button></td></tr>`).join(''), 'Aún no hay softwares en el catálogo.') +
+    `<p class="small muted" style="margin:10px 0 0">El código identifica al software en la base de datos (por ejemplo <code>inventario</code> o <code>contabilidad</code>) y no se puede cambiar después. Cada app nueva debe verificar el acceso con su código.</p>`;
+  $('bNuevoSw').onclick = () => modalSoftware(null);
+  $('cuerpo').querySelectorAll('[data-sw]').forEach(b => b.onclick = () => modalSoftware(softwares.find(s => s.codigo === b.dataset.sw)));
+}
+
+function modalSoftware(s) {
+  const m = abrirModal(`<h2>${s ? 'Editar software' : 'Nuevo software'}</h2>
+    <div class="grid2">
+      <div><label for="sNombre">Nombre comercial</label><input id="sNombre" value="${esc(s?.nombre || '')}" placeholder="Ej: Contabilidad Pyme" autofocus></div>
+      <div><label for="sCodigo">Código</label><input id="sCodigo" value="${esc(s?.codigo || '')}" placeholder="Ej: contabilidad" ${s ? 'disabled' : ''}></div>
+    </div>
+    <label for="sDesc">Qué hace (una frase)</label><input id="sDesc" value="${esc(s?.descripcion || '')}" placeholder="Ej: Contabilidad, nómina y reportes para pequeñas empresas.">
+    <label for="sUrl">Enlace de la app</label><input id="sUrl" value="${esc(s?.url || '')}" placeholder="https://…">
+    <div class="grid2"><div><label for="sOrden">Orden en las listas</label><input type="number" id="sOrden" value="${s?.orden ?? softwares.length + 1}"></div>
+      <div><label>&nbsp;</label><label class="interruptor" style="margin-top:8px"><input type="checkbox" id="sActivo" ${s?.activo !== false ? 'checked' : ''}><span></span>Disponible para vender</label></div></div>
+    <div class="modal-acciones"><button class="btn" data-cerrar>Cancelar</button><button class="btn btn-primary" id="sGuardar">${s ? 'Guardar cambios' : 'Crear software'}</button></div>`);
+  const el = q => m.el.querySelector(q);
+  if (!s) el('#sNombre').oninput = () => { if (!el('#sCodigo').dataset.tocado) el('#sCodigo').value = el('#sNombre').value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30); };
+  el('#sCodigo').oninput = () => el('#sCodigo').dataset.tocado = '1';
+  el('#sGuardar').onclick = async () => {
+    const d = { nombre: el('#sNombre').value.trim(), descripcion: el('#sDesc').value.trim() || null, url: el('#sUrl').value.trim() || null, orden: Number(el('#sOrden').value || 0), activo: el('#sActivo').checked };
+    if (!d.nombre) return aviso('Escribe el nombre del software.', 'error');
+    let r;
+    if (s) r = await db.from('softwares').update(d).eq('codigo', s.codigo);
+    else {
+      const codigo = el('#sCodigo').value.trim().toLowerCase();
+      if (!/^[a-z0-9_-]{2,30}$/.test(codigo)) return aviso('El código solo puede tener letras minúsculas, números y guiones (2 a 30 caracteres).', 'error');
+      r = await db.from('softwares').insert({ codigo, ...d });
+    }
+    if (r.error) return aviso(/duplicate|23505/.test(r.error.message) ? 'Ya existe un software con ese código.' : errorTexto(r.error), 'error');
+    m.cerrar(); aviso(s ? 'Software actualizado' : 'Software creado', 'ok'); verSoftwares();
+  };
+}
+
+async function verMiEmpresa() {
+  $('contenido').innerHTML = encabezado('Mi empresa', 'Los datos de tu empresa de software. Aparecen como proveedor en los tiquetes y facturas de tus clientes.') + '<div id="cuerpo" class="muted">Cargando…</div>';
+  const { data: p, error } = await db.from('plataforma').select('*').maybeSingle();
+  if (error) { $('cuerpo').textContent = errorTexto(error); return; }
+  const v = p || {};
+  $('cuerpo').className = '';
+  $('cuerpo').innerHTML = `<div class="col-ancha">
+    <div class="panel"><h2>Datos de tu empresa</h2><p class="sub">Solo tú los ves y los cambias</p>
+      <div class="grid2">
+        <div><label for="mNombre">Nombre o razón social</label><input id="mNombre" value="${esc(v.nombre || '')}" placeholder="Ej: Soluciones Empresariales SAS"></div>
+        <div class="grid2" style="gap:0 10px;grid-template-columns:minmax(0,1fr) 80px"><div><label for="mNit">NIT</label><input id="mNit" value="${esc(v.nit || '')}"></div><div><label for="mDv">DV</label><input id="mDv" value="${esc(v.dv || '')}" maxlength="1"></div></div>
+        <div><label for="mDir">Dirección</label><input id="mDir" value="${esc(v.direccion || '')}"></div>
+        <div><label for="mTel">Teléfono de soporte</label><input id="mTel" value="${esc(v.telefono || '')}"></div>
+        <div><label for="mCorreo">Correo</label><input type="email" id="mCorreo" value="${esc(v.correo || '')}"></div>
+        <div><label for="mWeb">Página web</label><input id="mWeb" value="${esc(v.web || '')}" placeholder="www.tuempresa.co"></div>
+      </div>
+      <label class="interruptor" style="margin-top:16px"><input type="checkbox" id="mTiq" ${v.mostrar_en_tiquete !== false ? 'checked' : ''}><span></span>Mostrar en los tiquetes y facturas impresas de tus clientes</label>
+      <div class="modal-acciones"><button class="btn btn-primary" id="mGuardar">Guardar datos</button></div>
+    </div>
+    <div class="panel" style="align-self:start"><h2>Así sale en el tiquete</h2><p class="sub">Una línea al final de cada tiquete impreso</p>
+      <div class="recibo-prev" id="mPrev"></div>
+      <p class="small muted" style="margin:12px 0 0">Además, en la app de tus clientes, el menú muestra "Software de" con el nombre de tu empresa.</p></div>
+  </div>`;
+  const prev = () => {
+    const n = $('mNombre').value.trim(), nit = $('mNit').value.trim(), dv = $('mDv').value.trim(), web = $('mWeb').value.trim();
+    $('mPrev').innerHTML = `<div class="rd-c">¡Gracias por su compra!</div><hr>${$('mTiq').checked && n ? `<div class="rd-c">Software: ${esc(n)}${nit ? ' NIT ' + esc(nit + (dv ? '-' + dv : '')) : ''}${web ? '<br>' + esc(web) : ''}</div>` : '<div class="rd-c">(No se muestra)</div>'}`;
+  };
+  ['mNombre', 'mNit', 'mDv', 'mWeb'].forEach(i => $(i).oninput = prev); $('mTiq').onchange = prev; prev();
+  $('mGuardar').onclick = async () => {
+    const d = { nombre: $('mNombre').value.trim() || null, nit: $('mNit').value.replace(/[^\d]/g, '') || null, dv: $('mDv').value.trim() || null, direccion: $('mDir').value.trim() || null,
+      telefono: $('mTel').value.trim() || null, correo: $('mCorreo').value.trim() || null, web: $('mWeb').value.trim() || null, mostrar_en_tiquete: $('mTiq').checked, actualizado_en: new Date().toISOString() };
+    const { error } = await db.from('plataforma').update(d).eq('id', 1);
+    if (error) return aviso(errorTexto(error), 'error');
+    aviso('Datos de tu empresa guardados', 'ok');
+  };
+}
+
+/* =====================================================================
+   USUARIOS
+   ===================================================================== */
+async function verUsuarios() {
+  $('contenido').innerHTML = encabezado('Usuarios', 'Todas las cuentas de todas las empresas y de todos tus softwares', `<button class="btn btn-primary" id="bNuevoU">${ico('mas')}Nuevo usuario</button>`) +
+    `<div class="filtros"><input type="search" id="fTexto" placeholder="Buscar por nombre o correo…"><select id="fTienda"><option value="">Todas las empresas</option></select><select id="fSw"><option value="">Todos los softwares</option></select><select id="fEstado"><option value="">Todos</option><option value="activo">Activos</option><option value="bloqueado">Bloqueados</option></select></div>
+     <div id="tablaU" class="muted">Cargando…</div>`;
+  try { await Promise.all([cargarTiendas(), cargarSoftwares()]); } catch (e) {}
+  $('fTienda').innerHTML += tiendas.map(t => `<option value="${t.id}">${esc(t.nombre)}</option>`).join('');
+  $('fSw').innerHTML += softwares.map(x => `<option value="${esc(x.codigo)}">${esc(x.nombre)}</option>`).join('');
+  $('bNuevoU').onclick = () => modalUsuario(null, null, () => pintarUsuarios($('tablaU'), null));
+  const filtrar = () => pintarUsuarios($('tablaU'), null, true);
+  $('fTexto').oninput = filtrar; $('fTienda').onchange = filtrar; $('fSw').onchange = filtrar; $('fEstado').onchange = filtrar;
+  pintarUsuarios($('tablaU'), null);
+}
+
+let cacheUsuarios = [];
+async function pintarUsuarios(cont, tiendaId, soloFiltrar = false) {
+  if (!soloFiltrar) {
+    try { cacheUsuarios = (await cuentas({ accion: 'listar', tienda_id: tiendaId || undefined })).usuarios; }
+    catch (e) { cont.className = ''; cont.innerHTML = `<div class="fe-caja error"><b>No se pudieron cargar las cuentas.</b><span class="small">${esc(errorTexto(e))}</span></div>`; return; }
+  }
+  if (!cont.isConnected) return;
+  let lista = tiendaId ? cacheUsuarios.filter(u => Number(u.tienda_id) === Number(tiendaId)) : cacheUsuarios;
+  const global = !tiendaId;
+  if (global && $('fTexto')) {
+    const t = $('fTexto').value.trim().toLowerCase(), ti = $('fTienda').value, es = $('fEstado').value, sw = $('fSw')?.value;
+    lista = lista.filter(u => (!t || (u.nombre || '').toLowerCase().includes(t) || u.email.includes(t)) && (!ti || String(u.tienda_id) === ti) && (!sw || (u.softwares || ['inventario']).includes(sw)) && (!es || (es === 'bloqueado') === u.bloqueado));
+  }
+  cont.className = '';
+  cont.innerHTML = tablaSimple(`<th>Persona</th>${global ? '<th>Empresa</th>' : ''}<th>Softwares</th><th>Rol</th><th>Estado</th>${global ? '<th>Último ingreso</th>' : ''}<th class="acciones">Acciones</th>`, lista.map(u => `<tr>
+      <td><div class="persona"><span class="avatar">${esc(iniciales(u.nombre || u.email))}</span><span><b>${esc(u.nombre || '—')}${u.es_yo ? ' <span class="small muted">(tú)</span>' : ''}</b><span class="small muted">${esc(u.email)}</span>${global ? '' : `<span class="small muted">${hace(u.ultimo_ingreso)}</span>`}</span></div></td>
+      ${global ? `<td>${esc(u.tienda)}</td>` : ''}
+      <td>${(u.softwares || ['inventario']).map(c => `<span class="badge neutro" style="margin:2px 4px 2px 0">${esc(nombreSw(c))}</span>`).join('')}</td>
+      <td><span class="badge ${u.rol === 'dueno' ? 'dueno' : 'neutro'}">${u.rol === 'dueno' ? 'Dueño' : 'Cajero'}</span></td>
+      <td><span class="badge ${u.bloqueado ? 'no' : 'ok'}">${u.bloqueado ? 'Bloqueado' : 'Activo'}</span></td>
+      ${global ? `<td class="small muted">${hace(u.ultimo_ingreso)}</td>` : ''}
+      <td class="acciones"><button class="link" data-editar="${u.user_id}">Editar</button>${u.es_yo ? '' : `<button class="link ${u.bloqueado ? '' : 'danger'}" data-bloq="${u.user_id}">${u.bloqueado ? 'Desbloquear' : 'Bloquear'}</button><button class="link danger" data-elim="${u.user_id}">Eliminar</button>`}</td>
+    </tr>`).join(''), 'Sin usuarios.');
+
+  const recargar = () => pintarUsuarios(cont, tiendaId);
+  const porId = id => cacheUsuarios.find(u => u.user_id === id);
+  cont.querySelectorAll('[data-editar]').forEach(b => b.onclick = () => modalUsuario(porId(b.dataset.editar), tiendaId, recargar));
+  cont.querySelectorAll('[data-bloq]').forEach(b => b.onclick = async () => {
+    const u = porId(b.dataset.bloq);
+    if (!u.bloqueado && !await confirmar('Bloquear cuenta', `${u.nombre || u.email} no podrá entrar hasta que la desbloquees. Su historial se conserva.`, 'Bloquear', true)) return;
+    try { await cuentas({ accion: 'bloquear', user_id: u.user_id, bloquear: !u.bloqueado }); aviso(u.bloqueado ? 'Cuenta desbloqueada' : 'Cuenta bloqueada', 'ok'); recargar(); }
+    catch (e) { aviso(errorTexto(e), 'error'); }
+  });
+  cont.querySelectorAll('[data-elim]').forEach(b => b.onclick = async () => {
+    const u = porId(b.dataset.elim);
+    if (!await confirmar('Eliminar cuenta', `Se elimina la cuenta de ${u.nombre || u.email} para siempre. Las ventas que hizo se conservan en los reportes.\n\nSi solo quieres que no entre por un tiempo, usa "Bloquear".`, 'Eliminar', true)) return;
+    try { await cuentas({ accion: 'eliminar', user_id: u.user_id }); aviso('Cuenta eliminada', 'ok'); recargar(); }
+    catch (e) { aviso(errorTexto(e), 'error'); }
+  });
+}
+
+function modalUsuario(u, tiendaFija, alGuardar) {
+  const nuevo = !u;
+  const clave = nuevo ? generarClave() : '';
+  const opcTiendas = () => tiendas.map(t => `<option value="${t.id}" ${(u ? u.tienda_id : tiendaFija) === t.id ? 'selected' : ''}>${esc(t.nombre)}</option>`).join('');
+  const m = abrirModal(`
+    <h2>${nuevo ? 'Nuevo usuario' : 'Editar usuario'}</h2>
+    <p class="muted">${nuevo ? 'La persona podrá entrar de inmediato con este correo y contraseña.' : 'Cambia los datos que necesites. La contraseña solo cambia si escribes una nueva.'}</p>
+    <div class="grid2">
+      <div><label for="uNombre">Nombre</label><input id="uNombre" value="${esc(u?.nombre || '')}" autofocus placeholder="Nombre y apellido"></div>
+      <div><label for="uEmail">Correo</label><input type="email" id="uEmail" value="${esc(u?.email || '')}" placeholder="persona@correo.com"></div>
+      <div><label for="uTienda">Empresa</label><select id="uTienda" ${u?.es_yo ? 'disabled' : ''}>${opcTiendas() || '<option value="">Cargando…</option>'}</select></div>
+      <div><label for="uRol">Rol</label><select id="uRol" ${u?.es_yo ? 'disabled' : ''}><option value="cajero" ${u?.rol !== 'dueno' ? 'selected' : ''}>Cajero</option><option value="dueno" ${u?.rol === 'dueno' ? 'selected' : ''}>Dueño</option></select></div>
+    </div>
+    <label>Softwares a los que puede entrar</label>
+    <div class="chips" id="uSws" style="gap:8px 16px"></div>
+    <label for="uClave">${nuevo ? 'Contraseña' : 'Nueva contraseña (opcional)'}</label>
+    <div class="clave"><input id="uClave" value="${clave}" placeholder="${nuevo ? '' : 'Déjala vacía para no cambiarla'}"><button class="btn" id="uGen" type="button">Generar</button></div>
+    <p class="small muted" style="margin:8px 0 0">El cajero vende, abre y cierra caja, registra gastos, entradas y fiados. El dueño además ve costos y reportes, anula ventas y configura su empresa. Solo aparecen los softwares que la empresa tiene contratados.</p>
+    <div class="modal-acciones"><button class="btn" data-cerrar>Cancelar</button><button class="btn btn-primary" id="uGuardar">${nuevo ? 'Crear usuario' : 'Guardar cambios'}</button></div>`);
+  const el = s => m.el.querySelector(s);
+  const marcados = new Set(u?.softwares || []);
+  const pintarSws = (reiniciar) => {
+    const t = tiendas.find(x => x.id === Number(el('#uTienda').value));
+    const contratados = (t?.softwares || []).map(x => x.software);
+    if (nuevo && (reiniciar || !marcados.size)) { marcados.clear(); contratados.forEach(c => marcados.add(c)); }
+    const lista = softwares.filter(x => contratados.includes(x.codigo) || marcados.has(x.codigo));
+    el('#uSws').innerHTML = lista.length ? lista.map(x => `<label class="row" style="margin:0;gap:6px;color:var(--text);font-weight:500"><input type="checkbox" data-sw="${esc(x.codigo)}" ${marcados.has(x.codigo) ? 'checked' : ''}>${esc(x.nombre)}${contratados.includes(x.codigo) ? '' : ' <span class="small muted">(no contratado)</span>'}</label>`).join('') : '<span class="small muted">Esta empresa no tiene softwares contratados.</span>';
+    el('#uSws').querySelectorAll('[data-sw]').forEach(c => c.onchange = () => { c.checked ? marcados.add(c.dataset.sw) : marcados.delete(c.dataset.sw); });
+  };
+  Promise.all([tiendas.length ? null : cargarTiendas(), softwares.length ? null : cargarSoftwares()]).then(() => { if (!el('#uTienda').options.length || el('#uTienda').value === '') el('#uTienda').innerHTML = opcTiendas(); pintarSws(); }).catch(() => {});
+  el('#uTienda').onchange = () => pintarSws(true);
+  el('#uGen').onclick = () => el('#uClave').value = generarClave();
+  el('#uGuardar').onclick = async () => {
+    const d = { nombre: el('#uNombre').value.trim(), email: el('#uEmail').value.trim().toLowerCase(), tienda_id: Number(el('#uTienda').value), rol: el('#uRol').value, password: el('#uClave').value.trim() };
+    if (!d.nombre || !correoValido(d.email)) return aviso('Escribe el nombre y un correo válido.', 'error');
+    if (!d.tienda_id) return aviso('Elige la empresa.', 'error');
+    d.softwares = [...marcados];
+    if (!d.softwares.length) return aviso('Marca al menos un software al que pueda entrar.', 'error');
+    if ((nuevo || d.password) && d.password.length < 6) return aviso('La contraseña debe tener mínimo 6 caracteres.', 'error');
+    el('#uGuardar').disabled = true;
+    try {
+      if (nuevo) await cuentas({ accion: 'crear', ...d });
+      else {
+        const cambios = { accion: 'editar', user_id: u.user_id, nombre: d.nombre, email: d.email, softwares: d.softwares };
+        if (d.password) cambios.password = d.password;
+        if (!u.es_yo) { cambios.rol = d.rol; cambios.tienda_id = d.tienda_id; }
+        await cuentas(cambios);
+      }
+      m.cerrar();
+      if (nuevo || d.password) mostrarCredenciales(d.nombre, d.email, d.password, tiendas.find(t => t.id === d.tienda_id)?.nombre || '', d.softwares[0]);
+      else aviso('Cambios guardados', 'ok');
+      alGuardar && alGuardar();
+    } catch (e) { el('#uGuardar').disabled = false; aviso(errorTexto(e), 'error'); }
+  };
+}
+
+function mostrarCredenciales(nombre, email, clave, tienda, software = 'inventario') {
+  const sw = softwares.find(x => x.codigo === software);
+  const enlace = software === 'inventario' ? (sw?.url || URL_APP) : (sw?.url || '(enlace del software)');
+  const texto = `Hola ${nombre.split(' ')[0]}, este es tu acceso a ${sw?.nombre || 'el software'} de ${tienda || 'tu empresa'}:\n\nEnlace: ${enlace}\nCorreo: ${email}\nContraseña: ${clave}`;
+  const m = abrirModal(`<h2>Acceso listo</h2><p class="muted">Envíale estos datos a la persona. Por seguridad, esta contraseña no se vuelve a mostrar.</p>
+    <div class="credenciales">${esc(texto)}</div>
+    <div class="modal-acciones"><button class="btn" id="cCopiar">Copiar</button><button class="btn" id="cWa">${ico('whatsapp')}Enviar por WhatsApp</button><button class="btn btn-primary" data-cerrar>Listo</button></div>`);
+  m.el.querySelector('#cCopiar').onclick = async () => { try { await navigator.clipboard.writeText(texto); aviso('Copiado', 'ok'); } catch (e) { aviso('No se pudo copiar; selecciona el texto y cópialo.', 'error'); } };
+  m.el.querySelector('#cWa').onclick = () => window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank');
+}
+
+iniciar();
+</script>
+</body>
+</html>
