@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="estilos.css?v=6">
+<link rel="stylesheet" href="estilos.css?v=7">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -514,12 +514,12 @@ async function iniciar() {
    NAVEGACIÓN
    ===================================================================== */
 const VISTAS = {
-  inicio:    { t: 'Inicio', g: 'Operación', f: () => verInicio() },
-  vender:    { t: 'Vender', g: 'Operación', f: () => verVender() },
-  caja:      { t: 'Caja', g: 'Operación', f: () => verCaja() },
-  clientes:  { t: 'Clientes y fiados', g: 'Operación', f: () => verClientes() },
-  productos: { t: 'Productos', g: 'Inventario', f: () => verProductos() },
-  entradas:  { t: 'Entradas', g: 'Inventario', f: () => verEntradas() },
+  inicio:    { t: 'Inicio', g: 'Día a día', f: () => verInicio() },
+  vender:    { t: 'Vender', g: 'Día a día', f: () => verVender() },
+  caja:      { t: 'Caja', g: 'Día a día', f: () => verCaja() },
+  clientes:  { t: 'Fiados', g: 'Día a día', f: () => verClientes() },
+  productos: { t: 'Productos', g: 'Mercancía', f: () => verProductos() },
+  entradas:  { t: 'Llegó mercancía', g: 'Mercancía', f: () => verEntradas() },
   reportes:  { t: 'Reportes', g: 'Gestión', f: () => verReportes(), dueno: true },
   config:    { t: 'Mi tienda', g: 'Gestión', f: () => verConfig(), dueno: true },
 };
@@ -555,9 +555,25 @@ function irA(vista) {
   $('contenido').classList.remove('con-barra-movil');
   VISTAS[vista].f();
 }
+// Ayuda corta de cada pantalla: se muestra hasta que la persona toca "Entendido" y se puede volver a abrir con "?".
+const AYUDAS = {
+  vender: ['Escanea el código de barras o escribe el nombre del producto.', 'Revisa el total y toca "Cobrar". Elige cómo te pagan (efectivo, Nequi, fiado…).', 'El inventario se descuenta solo y la venta queda en la caja abierta.'],
+  clientes: ['Cuando vendas "fiado", la deuda se anota aquí sola.', 'Cuando el cliente te pague una parte, toca "Abonar".', 'Puedes enviarle por WhatsApp un recordatorio de lo que debe.'],
+  productos: ['Aquí están todos tus productos con su precio y cuántos te quedan.', 'Toca "Nuevo producto" para agregar uno. El "mínimo" sirve para avisarte cuando se esté acabando.'],
+  entradas: ['Úsala cuando te llegue un pedido del proveedor.', 'Agrega cada producto con la cantidad y el precio que te costó.', 'Al guardar, las cantidades se suman a tu inventario.'],
+  reportes: ['Elige el periodo (hoy, semana, mes…) para ver cuánto vendiste y cuánto ganaste.', 'Puedes descargarlo en Excel con "Exportar a Excel".'],
+};
 function encabezado(titulo, sub = '', acciones = '') {
-  return `<div class="encabezado"><div><h1>${titulo}</h1>${sub ? `<p>${sub}</p>` : ''}</div>${acciones ? `<div class="row">${acciones}</div>` : ''}</div>`;
+  const v = E.vista, ayuda = AYUDAS[v], abierta = ayuda && leerLocal('ayuda-' + v) !== 'no';
+  const btnAyuda = ayuda && !abierta ? `<button class="btn btn-ayuda" data-ayuda-abrir="${v}" aria-label="¿Cómo se usa esta pantalla?">?</button>` : '';
+  return `<div class="encabezado"><div><h1>${titulo}</h1>${sub ? `<p>${sub}</p>` : ''}</div>${acciones || btnAyuda ? `<div class="row">${btnAyuda}${acciones}</div>` : ''}</div>` +
+    (abierta ? `<div class="ayuda" role="note"><div class="ayuda-ico">?</div><div class="ayuda-txt"><b>¿Cómo se usa?</b><ol>${ayuda.map(x => `<li>${x}</li>`).join('')}</ol></div><button class="btn btn-sm" data-ayuda-cerrar="${v}">Entendido</button></div>` : '');
 }
+document.addEventListener('click', e => {
+  const c = e.target.closest('[data-ayuda-cerrar]'), a = e.target.closest('[data-ayuda-abrir]');
+  if (c) { guardarLocal('ayuda-' + c.dataset.ayudaCerrar, 'no'); c.closest('.ayuda').remove(); }
+  if (a) { guardarLocal('ayuda-' + a.dataset.ayudaAbrir, 'si'); irA(a.dataset.ayudaAbrir); }
+});
 
 // ----- Barra superior -----
 $('btnMenu').innerHTML = ico('menu');
@@ -793,8 +809,25 @@ async function verInicio() {
   const deudores = E.clientes.filter(x => x.saldo > 0).length;
   const bajo = activos().filter(p => Number(p.stock_minimo) > 0 && p.stock <= Number(p.stock_minimo)).sort((a, b) => a.stock - b.stock);
   c.innerHTML = encabezado(`${saludo()}, ${esc(nombre)}`, fecha.charAt(0).toUpperCase() + fecha.slice(1),
-      `<button class="btn btn-primary" data-ir="vender">${ico('vender')}Nueva venta <kbd>F1</kbd></button>`) +
+      '') +
     (!E.caja ? `<div class="aviso-caja"><span>${ico('caja')}La caja está cerrada. Ábrela para empezar a vender.</span><button class="btn btn-sm" data-ir="caja">Abrir caja</button></div>` : '') +
+    `<div class="acciones-grandes">
+      <button class="accion-g principal" data-ir="vender">${ico('vender')}<b>Vender</b><small>Cobra a un cliente <kbd>F1</kbd></small></button>
+      <button class="accion-g" data-ir="caja">${ico('caja')}<b>${E.caja ? 'Cerrar caja' : 'Abrir caja'}</b><small>${E.caja ? 'Cuenta el dinero al terminar el día' : 'Empieza el día con el dinero del cajón'}</small></button>
+      <button class="accion-g" data-ir="entradas">${ico('entradas')}<b>Llegó mercancía</b><small>Suma lo que te trajo el proveedor</small></button>
+      <button class="accion-g" data-ir="clientes">${ico('clientes')}<b>Fiados</b><small>${deudores ? `${plural(deudores, 'cliente te debe', 'clientes te deben')} ${pesos(porCobrar)}` : 'Nadie te debe'}</small></button>
+    </div>` +
+    (() => {
+      const pasos = [
+        { ok: activos().length > 0, t: 'Agrega tus productos', d: 'Nombre, precio y cuántos tienes.', ir: 'productos' },
+        { ok: !!E.caja || leerLocal('paso-caja') === 'si', t: 'Abre la caja', d: 'Con el dinero que hay en el cajón al empezar.', ir: 'caja' },
+        { ok: leerLocal('paso-venta') === 'si', t: 'Haz tu primera venta', d: 'Busca el producto y cobra.', ir: 'vender' },
+      ];
+      if (E.caja) guardarLocal('paso-caja', 'si');
+      if (pasos.every(p => p.ok) || leerLocal('primeros-pasos') === 'no') return '';
+      return `<div class="panel primeros"><div class="panel-cab"><div><h2>Primeros pasos</h2><p class="sub">Haz esto en orden y la tienda queda lista para vender.</p></div><button class="link" id="ocultarPasos">Ocultar</button></div>
+        <ol class="pasos">${pasos.map((p, i) => `<li class="${p.ok ? 'hecho' : ''}"><span class="num-paso">${p.ok ? '✓' : i + 1}</span><div><b>${p.t}</b><small>${p.d}</small></div>${p.ok ? '' : `<button class="btn btn-sm btn-primary" data-ir="${p.ir}">Hacerlo</button>`}</li>`).join('')}</ol></div>`;
+    })() +
     `<div class="kpis" id="kpisHoy">${kpiCargando(esDueno() ? 5 : 4)}</div>` +
     (esDueno() ? `<div class="col-ancha">
         <div class="panel"><div class="panel-cab"><div><h2>Ventas de los últimos 14 días</h2><p class="sub" id="sub14">Total vendido por día</p></div><button class="link" data-ir="reportes">Ver reportes</button></div><div id="graf14"></div></div>
@@ -807,6 +840,7 @@ async function verInicio() {
     </div>
     <div class="panel" style="margin-top:16px"><div class="panel-cab"><div><h2>Pedido sugerido por proveedor</h2><p class="sub">Cantidades para volver a tener el doble del stock mínimo. Envíalo por WhatsApp con un toque.</p></div></div><div id="pedido"></div></div>`;
   c.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => irA(b.dataset.ir));
+  $('ocultarPasos')?.addEventListener('click', () => { guardarLocal('primeros-pasos', 'no'); $('ocultarPasos').closest('.primeros').remove(); });
   $('verBajo')?.addEventListener('click', () => { E.filtroProd.estado = 'bajo'; irA('productos'); });
 
   // Stock bajo
@@ -1214,6 +1248,7 @@ async function cobrar() {
   const { data: v, error } = await db.rpc('registrar_venta', args);
   cobrando = false;
   if (error) { $('btnCobrar').disabled = false; return aviso(errorTexto(error), 'error'); }
+  guardarLocal('paso-venta', 'si');
 
   const cliente = E.clientes.find(c => c.id === E.clienteVenta);
   const datos = { ...v, pagos: v.pagos || pagos, lineas, cliente: (E.medio === 'fiado' || fe) ? cliente : null, cajero: E.nombre, tipo_comprobante: fe ? 'electronica' : 'tiquete', fe_estado: fe ? 'pendiente' : null };
@@ -1613,7 +1648,7 @@ function imprimirCierre(caja, r) {
    ===================================================================== */
 function verEntradas() {
   const en = E.entrada;
-  $('contenido').innerHTML = encabezado('Entrada de mercancía', 'Registra la factura del proveedor con todos sus productos. El stock sube al guardar.') +
+  $('contenido').innerHTML = encabezado('Llegó mercancía', 'Anota lo que te trajo el proveedor. Al guardar, se suma a tu inventario.') +
     `<div class="panel">
       <div class="grid2">
         <div><label style="margin-top:0">Proveedor</label><select id="entProv"><option value="">Sin proveedor</option>${E.proveedores.map(p => `<option value="${p.id}" ${String(en.proveedor) === String(p.id) ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select></div>
@@ -2065,7 +2100,7 @@ function menuExcel(ancla) {
 function verClientes() {
   const total = E.clientes.reduce((t, c) => t + Math.max(c.saldo, 0), 0);
   const conDeuda = E.clientes.filter(c => c.saldo > 0).length;
-  $('contenido').innerHTML = encabezado('Clientes y fiados', 'Lleva la cuenta de lo que te deben y registra los abonos', `<button class="btn btn-primary" id="btnNuevoCliente">${ico('mas')}Nuevo cliente</button>`) +
+  $('contenido').innerHTML = encabezado('Fiados', 'Clientes que te deben y lo que te han pagado (abonos)', `<button class="btn btn-primary" id="btnNuevoCliente">${ico('mas')}Nuevo cliente</button>`) +
     `<div class="kpis"><div class="kpi alerta"><span>Total por cobrar</span><strong>${pesos(total)}</strong></div><div class="kpi"><span>Clientes con deuda</span><strong>${conDeuda}</strong></div><div class="kpi"><span>Clientes</span><strong>${E.clientes.length}</strong></div></div>
     <div class="filtros"><input type="search" id="buscarCliente" placeholder="Buscar por nombre, cédula o teléfono..."><select id="filtroDeuda"><option value="">Todos</option><option value="deuda">Con deuda</option></select></div>
     <div class="tabla-wrap"><table><thead><tr><th>Cliente</th><th>Teléfono</th><th class="num">Saldo</th><th></th></tr></thead><tbody id="tablaClientes"></tbody></table></div>`;

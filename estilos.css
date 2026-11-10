@@ -434,3 +434,31 @@ tr.clic{cursor:pointer}
 }
 .sus-fila{border:1px solid var(--line);border-radius:var(--r-sm);padding:12px 14px;margin-top:10px}
 .sus-fila label{margin-top:10px}
+
+/* ---------- Más sencillo: acciones grandes, primeros pasos y ayuda por pantalla ---------- */
+.acciones-grandes{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.accion-g{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:18px;border-radius:var(--r);border:1.5px solid var(--line);background:var(--card);color:var(--text);cursor:pointer;font:inherit;transition:border-color .15s}
+.accion-g:hover{border-color:var(--brand)}
+.accion-g svg{width:26px;height:26px;color:var(--brand-strong);margin-bottom:6px}
+.accion-g b{font-size:1.08rem}
+.accion-g small{color:var(--muted);font-size:.86rem}
+.accion-g.principal{background:var(--brand);border-color:var(--brand);color:#fff}
+.accion-g.principal svg,.accion-g.principal small{color:#fff}
+.accion-g.principal small{opacity:.88}
+.accion-g kbd{background:rgba(255,255,255,.2);border:0;color:inherit}
+.primeros{margin-bottom:16px}
+.pasos{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px}
+.pasos li{display:flex;align-items:center;gap:14px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-sm)}
+.pasos li>div{flex:1;min-width:0}
+.pasos li small{display:block;color:var(--muted);font-size:.85rem}
+.pasos li.hecho{opacity:.6}
+.pasos li.hecho b{text-decoration:line-through}
+.num-paso{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:var(--line-2);color:var(--text)}
+.pasos li.hecho .num-paso{background:var(--brand);color:#fff}
+.ayuda{display:flex;gap:14px;align-items:flex-start;padding:14px 16px;margin:0 0 16px;border-radius:var(--r);background:var(--brand-soft);border:1px solid var(--brand-line)}
+.ayuda-ico,.btn-ayuda{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:var(--brand);color:#fff}
+.btn-ayuda{padding:0;min-height:0;border:none;width:36px;height:36px;font-size:1rem}
+.ayuda-txt{flex:1;min-width:0}
+.ayuda ol{margin:6px 0 0;padding-left:20px;color:var(--text);font-size:.92rem;line-height:1.5}
+@media (max-width:900px){.acciones-grandes{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.ayuda{flex-wrap:wrap}.pasos li{flex-wrap:wrap}.accion-g{padding:14px}}
