@@ -509,7 +509,8 @@ async function verTienda(id) {
         <label class="interruptor"><input type="checkbox" id="feActiva" ${t.fe_activa ? 'checked' : ''}><span></span>Activa</label></div>
         <div class="grid2">
           <div><label for="feAmbiente">Ambiente</label><select id="feAmbiente"><option value="pruebas" ${t.fe_ambiente !== 'produccion' ? 'selected' : ''}>Pruebas (sandbox)</option><option value="produccion" ${t.fe_ambiente === 'produccion' ? 'selected' : ''}>Producción (facturas reales)</option></select></div>
-          <div><label for="feRango">Rango de numeración</label><select id="feRango"><option value="">El único activo (automático)</option></select></div>
+          <div><label for="feRango">Rango de facturas</label><select id="feRango"><option value="">El único activo (automático)</option></select></div>
+          <div><label for="feRangoNc">Rango de notas crédito</label><select id="feRangoNc"><option value="">El único activo (automático)</option></select></div>
           <div><label for="feClientId">Client ID</label><input id="feClientId" autocomplete="off"></div>
           <div><label for="feSecret">Client Secret</label><input id="feSecret" type="password" autocomplete="new-password"></div>
           <div><label for="feUsuario">Usuario (correo de Factus)</label><input id="feUsuario" autocomplete="off"></div>
@@ -620,10 +621,19 @@ function modalPago(s, alGuardar) {
 async function panelFacturacion(id) {
   let cfg = {};
   const estado = (txt, color = '') => { const e = $('feEstado'); if (e) { e.textContent = txt; e.style.color = color; } };
-  const ponerRango = (lista, sel) => {
-    $('feRango').innerHTML = '<option value="">El único activo (automático)</option>' + (lista || []).map(r => `<option value="${r.id}">${esc(r.id)}: ${esc(r.prefijo)} ${esc(r.documento)} ${r.desde !== '' ? `(${esc(r.desde)} a ${esc(r.hasta)})` : ''}${r.activo === false ? ', inactivo' : ''}</option>`).join('');
-    if (sel && ![...$('feRango').options].some(o => o.value === String(sel))) $('feRango').innerHTML += `<option value="${sel}">${sel} (guardado)</option>`;
-    $('feRango').value = sel ? String(sel) : '';
+  const llenarRango = (idSel, lista, sel) => {
+    const el = $(idSel);
+    el.innerHTML = '<option value="">El único activo (automático)</option>' + (lista || []).map(r => `<option value="${r.id}">${esc(r.id)}: ${esc(r.prefijo)} ${esc(r.documento)} ${r.desde !== '' ? `(${esc(r.desde)} a ${esc(r.hasta)})` : ''}${r.activo === false ? ', inactivo' : ''}</option>`).join('');
+    if (sel && ![...el.options].some(o => o.value === String(sel))) el.innerHTML += `<option value="${sel}">${sel} (guardado)</option>`;
+    el.value = sel ? String(sel) : '';
+  };
+  const esNc = r => /cr[eé]dit/i.test(String(r.documento));
+  const ponerRango = (lista, sel, selNc) => {
+    lista = lista || [];
+    const fact = lista.filter(r => !esNc(r) && !/d[eé]bit|soporte|n[oó]mina|ajuste/i.test(String(r.documento)));
+    const nc = lista.filter(esNc);
+    llenarRango('feRango', fact.length ? fact : lista, sel);
+    llenarRango('feRangoNc', nc.length ? nc : lista, selNc);
   };
   try {
     cfg = await cuentas({ accion: 'fe_ver', tienda_id: id });
@@ -631,7 +641,7 @@ async function panelFacturacion(id) {
     $('feClientId').value = cfg.client_id; $('feUsuario').value = cfg.usuario;
     $('feSecret').placeholder = cfg.tiene_secreto ? '•••••• guardado (escribe para cambiarlo)' : '';
     $('feClave').placeholder = cfg.tiene_clave ? '•••••• guardada (escribe para cambiarla)' : '';
-    ponerRango([], cfg.numbering_range_id);
+    ponerRango([], cfg.numbering_range_id, cfg.nc_range_id);
     estado(cfg.tiene_secreto && cfg.tiene_clave ? 'Credenciales guardadas. Usa "Probar conexión" para verificarlas.' : 'Aún no hay credenciales de Factus para esta tienda.');
   } catch (e) { estado(errorTexto(e), 'var(--danger)'); }
 
@@ -639,7 +649,7 @@ async function panelFacturacion(id) {
     const { error } = await db.from('tiendas').update({ fe_activa: $('feActiva').checked, fe_ambiente: $('feAmbiente').value }).eq('id', id);
     if (error) throw error;
     await cuentas({ accion: 'fe_guardar', tienda_id: id, client_id: $('feClientId').value, usuario: $('feUsuario').value,
-      client_secret: $('feSecret').value, clave: $('feClave').value, numbering_range_id: $('feRango').value || null });
+      client_secret: $('feSecret').value, clave: $('feClave').value, numbering_range_id: $('feRango').value || null, nc_range_id: $('feRangoNc').value || null });
     $('feSecret').value = ''; $('feClave').value = '';
     if (!silencioso) aviso('Facturación guardada', 'ok');
   };
@@ -652,8 +662,8 @@ async function panelFacturacion(id) {
     try {
       await guardar(true);
       const r = await cuentas({ accion: 'fe_probar', tienda_id: id });
-      ponerRango(r.rangos, $('feRango').value || cfg.numbering_range_id);
-      estado(`Conexión correcta. Factus tiene ${plural(r.rangos.length, 'rango', 'rangos')} de numeración. Si hay más de uno, elige el de facturas y guarda.`, 'var(--ok)');
+      ponerRango(r.rangos, $('feRango').value || cfg.numbering_range_id, $('feRangoNc').value || cfg.nc_range_id);
+      estado(`Conexión correcta. Factus tiene ${plural(r.rangos.length, 'rango', 'rangos')} de numeración. Elige el de facturas y el de notas crédito, y guarda.`, 'var(--ok)');
     } catch (e) { estado(errorTexto(e), 'var(--danger)'); }
   };
 }

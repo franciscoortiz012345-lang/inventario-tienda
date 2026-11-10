@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="estilos.css?v=7">
+<link rel="stylesheet" href="estilos.css?v=6">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -514,12 +514,12 @@ async function iniciar() {
    NAVEGACIÓN
    ===================================================================== */
 const VISTAS = {
-  inicio:    { t: 'Inicio', g: 'Día a día', f: () => verInicio() },
-  vender:    { t: 'Vender', g: 'Día a día', f: () => verVender() },
-  caja:      { t: 'Caja', g: 'Día a día', f: () => verCaja() },
-  clientes:  { t: 'Fiados', g: 'Día a día', f: () => verClientes() },
-  productos: { t: 'Productos', g: 'Mercancía', f: () => verProductos() },
-  entradas:  { t: 'Llegó mercancía', g: 'Mercancía', f: () => verEntradas() },
+  inicio:    { t: 'Inicio', g: 'Operación', f: () => verInicio() },
+  vender:    { t: 'Vender', g: 'Operación', f: () => verVender() },
+  caja:      { t: 'Caja', g: 'Operación', f: () => verCaja() },
+  clientes:  { t: 'Clientes y fiados', g: 'Operación', f: () => verClientes() },
+  productos: { t: 'Productos', g: 'Inventario', f: () => verProductos() },
+  entradas:  { t: 'Entradas', g: 'Inventario', f: () => verEntradas() },
   reportes:  { t: 'Reportes', g: 'Gestión', f: () => verReportes(), dueno: true },
   config:    { t: 'Mi tienda', g: 'Gestión', f: () => verConfig(), dueno: true },
 };
@@ -555,25 +555,9 @@ function irA(vista) {
   $('contenido').classList.remove('con-barra-movil');
   VISTAS[vista].f();
 }
-// Ayuda corta de cada pantalla: se muestra hasta que la persona toca "Entendido" y se puede volver a abrir con "?".
-const AYUDAS = {
-  vender: ['Escanea el código de barras o escribe el nombre del producto.', 'Revisa el total y toca "Cobrar". Elige cómo te pagan (efectivo, Nequi, fiado…).', 'El inventario se descuenta solo y la venta queda en la caja abierta.'],
-  clientes: ['Cuando vendas "fiado", la deuda se anota aquí sola.', 'Cuando el cliente te pague una parte, toca "Abonar".', 'Puedes enviarle por WhatsApp un recordatorio de lo que debe.'],
-  productos: ['Aquí están todos tus productos con su precio y cuántos te quedan.', 'Toca "Nuevo producto" para agregar uno. El "mínimo" sirve para avisarte cuando se esté acabando.'],
-  entradas: ['Úsala cuando te llegue un pedido del proveedor.', 'Agrega cada producto con la cantidad y el precio que te costó.', 'Al guardar, las cantidades se suman a tu inventario.'],
-  reportes: ['Elige el periodo (hoy, semana, mes…) para ver cuánto vendiste y cuánto ganaste.', 'Puedes descargarlo en Excel con "Exportar a Excel".'],
-};
 function encabezado(titulo, sub = '', acciones = '') {
-  const v = E.vista, ayuda = AYUDAS[v], abierta = ayuda && leerLocal('ayuda-' + v) !== 'no';
-  const btnAyuda = ayuda && !abierta ? `<button class="btn btn-ayuda" data-ayuda-abrir="${v}" aria-label="¿Cómo se usa esta pantalla?">?</button>` : '';
-  return `<div class="encabezado"><div><h1>${titulo}</h1>${sub ? `<p>${sub}</p>` : ''}</div>${acciones || btnAyuda ? `<div class="row">${btnAyuda}${acciones}</div>` : ''}</div>` +
-    (abierta ? `<div class="ayuda" role="note"><div class="ayuda-ico">?</div><div class="ayuda-txt"><b>¿Cómo se usa?</b><ol>${ayuda.map(x => `<li>${x}</li>`).join('')}</ol></div><button class="btn btn-sm" data-ayuda-cerrar="${v}">Entendido</button></div>` : '');
+  return `<div class="encabezado"><div><h1>${titulo}</h1>${sub ? `<p>${sub}</p>` : ''}</div>${acciones ? `<div class="row">${acciones}</div>` : ''}</div>`;
 }
-document.addEventListener('click', e => {
-  const c = e.target.closest('[data-ayuda-cerrar]'), a = e.target.closest('[data-ayuda-abrir]');
-  if (c) { guardarLocal('ayuda-' + c.dataset.ayudaCerrar, 'no'); c.closest('.ayuda').remove(); }
-  if (a) { guardarLocal('ayuda-' + a.dataset.ayudaAbrir, 'si'); irA(a.dataset.ayudaAbrir); }
-});
 
 // ----- Barra superior -----
 $('btnMenu').innerHTML = ico('menu');
@@ -736,7 +720,8 @@ async function cargarDatos() {
     E.proveedores = prov.data || [];
     const s = Object.fromEntries(stock.map(x => [x.id, Number(x.stock)]));
     E.productos = prod.map(p => ({ ...p, stock: s[p.id] ?? 0 }));
-    E.clientes = cli.map(c => ({ ...c, saldo: Number(c.saldo) }));
+    E.clientesTodos = cli.map(c => ({ ...c, saldo: Number(c.saldo) }));
+    E.clientes = E.clientesTodos.filter(c => c.activo !== false);
     E.usuarios = Object.fromEntries((us.data || []).map(u => [u.user_id, u.nombre || u.email.split('@')[0]]));
     E.caja = caja.data || null;
     cacheVence = null;
@@ -809,25 +794,8 @@ async function verInicio() {
   const deudores = E.clientes.filter(x => x.saldo > 0).length;
   const bajo = activos().filter(p => Number(p.stock_minimo) > 0 && p.stock <= Number(p.stock_minimo)).sort((a, b) => a.stock - b.stock);
   c.innerHTML = encabezado(`${saludo()}, ${esc(nombre)}`, fecha.charAt(0).toUpperCase() + fecha.slice(1),
-      '') +
+      `<button class="btn btn-primary" data-ir="vender">${ico('vender')}Nueva venta <kbd>F1</kbd></button>`) +
     (!E.caja ? `<div class="aviso-caja"><span>${ico('caja')}La caja está cerrada. Ábrela para empezar a vender.</span><button class="btn btn-sm" data-ir="caja">Abrir caja</button></div>` : '') +
-    `<div class="acciones-grandes">
-      <button class="accion-g principal" data-ir="vender">${ico('vender')}<b>Vender</b><small>Cobra a un cliente <kbd>F1</kbd></small></button>
-      <button class="accion-g" data-ir="caja">${ico('caja')}<b>${E.caja ? 'Cerrar caja' : 'Abrir caja'}</b><small>${E.caja ? 'Cuenta el dinero al terminar el día' : 'Empieza el día con el dinero del cajón'}</small></button>
-      <button class="accion-g" data-ir="entradas">${ico('entradas')}<b>Llegó mercancía</b><small>Suma lo que te trajo el proveedor</small></button>
-      <button class="accion-g" data-ir="clientes">${ico('clientes')}<b>Fiados</b><small>${deudores ? `${plural(deudores, 'cliente te debe', 'clientes te deben')} ${pesos(porCobrar)}` : 'Nadie te debe'}</small></button>
-    </div>` +
-    (() => {
-      const pasos = [
-        { ok: activos().length > 0, t: 'Agrega tus productos', d: 'Nombre, precio y cuántos tienes.', ir: 'productos' },
-        { ok: !!E.caja || leerLocal('paso-caja') === 'si', t: 'Abre la caja', d: 'Con el dinero que hay en el cajón al empezar.', ir: 'caja' },
-        { ok: leerLocal('paso-venta') === 'si', t: 'Haz tu primera venta', d: 'Busca el producto y cobra.', ir: 'vender' },
-      ];
-      if (E.caja) guardarLocal('paso-caja', 'si');
-      if (pasos.every(p => p.ok) || leerLocal('primeros-pasos') === 'no') return '';
-      return `<div class="panel primeros"><div class="panel-cab"><div><h2>Primeros pasos</h2><p class="sub">Haz esto en orden y la tienda queda lista para vender.</p></div><button class="link" id="ocultarPasos">Ocultar</button></div>
-        <ol class="pasos">${pasos.map((p, i) => `<li class="${p.ok ? 'hecho' : ''}"><span class="num-paso">${p.ok ? '✓' : i + 1}</span><div><b>${p.t}</b><small>${p.d}</small></div>${p.ok ? '' : `<button class="btn btn-sm btn-primary" data-ir="${p.ir}">Hacerlo</button>`}</li>`).join('')}</ol></div>`;
-    })() +
     `<div class="kpis" id="kpisHoy">${kpiCargando(esDueno() ? 5 : 4)}</div>` +
     (esDueno() ? `<div class="col-ancha">
         <div class="panel"><div class="panel-cab"><div><h2>Ventas de los últimos 14 días</h2><p class="sub" id="sub14">Total vendido por día</p></div><button class="link" data-ir="reportes">Ver reportes</button></div><div id="graf14"></div></div>
@@ -840,7 +808,6 @@ async function verInicio() {
     </div>
     <div class="panel" style="margin-top:16px"><div class="panel-cab"><div><h2>Pedido sugerido por proveedor</h2><p class="sub">Cantidades para volver a tener el doble del stock mínimo. Envíalo por WhatsApp con un toque.</p></div></div><div id="pedido"></div></div>`;
   c.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => irA(b.dataset.ir));
-  $('ocultarPasos')?.addEventListener('click', () => { guardarLocal('primeros-pasos', 'no'); $('ocultarPasos').closest('.primeros').remove(); });
   $('verBajo')?.addEventListener('click', () => { E.filtroProd.estado = 'bajo'; irA('productos'); });
 
   // Stock bajo
@@ -1248,7 +1215,6 @@ async function cobrar() {
   const { data: v, error } = await db.rpc('registrar_venta', args);
   cobrando = false;
   if (error) { $('btnCobrar').disabled = false; return aviso(errorTexto(error), 'error'); }
-  guardarLocal('paso-venta', 'si');
 
   const cliente = E.clientes.find(c => c.id === E.clienteVenta);
   const datos = { ...v, pagos: v.pagos || pagos, lineas, cliente: (E.medio === 'fiado' || fe) ? cliente : null, cajero: E.nombre, tipo_comprobante: fe ? 'electronica' : 'tiquete', fe_estado: fe ? 'pendiente' : null };
@@ -1648,7 +1614,7 @@ function imprimirCierre(caja, r) {
    ===================================================================== */
 function verEntradas() {
   const en = E.entrada;
-  $('contenido').innerHTML = encabezado('Llegó mercancía', 'Anota lo que te trajo el proveedor. Al guardar, se suma a tu inventario.') +
+  $('contenido').innerHTML = encabezado('Entrada de mercancía', 'Registra la factura del proveedor con todos sus productos. El stock sube al guardar.') +
     `<div class="panel">
       <div class="grid2">
         <div><label style="margin-top:0">Proveedor</label><select id="entProv"><option value="">Sin proveedor</option>${E.proveedores.map(p => `<option value="${p.id}" ${String(en.proveedor) === String(p.id) ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select></div>
@@ -2100,7 +2066,7 @@ function menuExcel(ancla) {
 function verClientes() {
   const total = E.clientes.reduce((t, c) => t + Math.max(c.saldo, 0), 0);
   const conDeuda = E.clientes.filter(c => c.saldo > 0).length;
-  $('contenido').innerHTML = encabezado('Fiados', 'Clientes que te deben y lo que te han pagado (abonos)', `<button class="btn btn-primary" id="btnNuevoCliente">${ico('mas')}Nuevo cliente</button>`) +
+  $('contenido').innerHTML = encabezado('Clientes y fiados', 'Lleva la cuenta de lo que te deben y registra los abonos', `<button class="btn btn-primary" id="btnNuevoCliente">${ico('mas')}Nuevo cliente</button>`) +
     `<div class="kpis"><div class="kpi alerta"><span>Total por cobrar</span><strong>${pesos(total)}</strong></div><div class="kpi"><span>Clientes con deuda</span><strong>${conDeuda}</strong></div><div class="kpi"><span>Clientes</span><strong>${E.clientes.length}</strong></div></div>
     <div class="filtros"><input type="search" id="buscarCliente" placeholder="Buscar por nombre, cédula o teléfono..."><select id="filtroDeuda"><option value="">Todos</option><option value="deuda">Con deuda</option></select></div>
     <div class="tabla-wrap"><table><thead><tr><th>Cliente</th><th>Teléfono</th><th class="num">Saldo</th><th></th></tr></thead><tbody id="tablaClientes"></tbody></table></div>`;
@@ -2117,86 +2083,178 @@ function verClientes() {
         <button class="link" data-hist="${c.id}">Historial</button>
         ${c.saldo > 0 && c.telefono ? `<button class="link" data-cobrar="${c.id}">Cobrar por WhatsApp</button>` : ''}
         <button class="link" data-editarc="${c.id}">Editar</button>
+        ${esDueno() ? `<button class="link danger" data-borrarc="${c.id}">Eliminar</button>` : ''}
       </td></tr>`).join('') : `<tr><td colspan="4" class="vacio">${E.clientes.length ? 'Ningún cliente coincide.' : 'Aún no hay clientes. Créalos aquí o al fiar una venta.'}</td></tr>`;
     const cli = id => E.clientes.find(c => c.id === Number(id));
     $('tablaClientes').querySelectorAll('[data-abonar]').forEach(b => b.onclick = () => modalAbono(cli(b.dataset.abonar)));
     $('tablaClientes').querySelectorAll('[data-hist]').forEach(b => b.onclick = () => modalHistorialCliente(cli(b.dataset.hist)));
     $('tablaClientes').querySelectorAll('[data-editarc]').forEach(b => b.onclick = () => modalCliente(cli(b.dataset.editarc), () => verClientes()));
+    $('tablaClientes').querySelectorAll('[data-borrarc]').forEach(b => b.onclick = () => eliminarCliente(cli(b.dataset.borrarc)));
     $('tablaClientes').querySelectorAll('[data-cobrar]').forEach(b => b.onclick = () => { const c = cli(b.dataset.cobrar); abrirWhatsApp(c.telefono, `Hola ${c.nombre}, te saluda ${E.tienda.nombre}. Te recordamos que tienes un saldo pendiente de ${pesos(c.saldo)}. ¡Gracias!`); });
   };
   $('buscarCliente').oninput = pintar; $('filtroDeuda').onchange = pintar;
   pintar();
 }
 
+// Dígito de verificación del NIT (algoritmo DIAN)
+function dvNit(nit) {
+  const d = soloNumeros(nit); if (!d) return '';
+  const pesos = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
+  let suma = 0;
+  [...d].reverse().forEach((x, i) => { suma += Number(x) * (pesos[i] || 0); });
+  const r = suma % 11;
+  return String(r > 1 ? 11 - r : r);
+}
+// Separa un nombre completo en nombres y apellidos (se puede corregir a mano)
+function partirNombre(t) {
+  const w = String(t || '').trim().split(/\s+/).filter(Boolean);
+  if (w.length <= 1) return { nombres: w[0] || '', apellidos: '' };
+  const n = w.length >= 4 ? 2 : 1;
+  return { nombres: w.slice(0, n).join(' '), apellidos: w.slice(n).join(' ') };
+}
+
 function modalCliente(c, alGuardar, pre = {}) {
+  const empresa0 = (c?.tipo_persona || pre.persona) === '1';
+  const partes = c && !empresa0 ? (c.nombres || c.apellidos ? { nombres: c.nombres || '', apellidos: c.apellidos || '' } : partirNombre(c.nombre)) : { nombres: '', apellidos: '' };
+  const fe = !!E.tienda?.fe_activa;
   const m = abrirModal(`<h2>${c ? 'Editar cliente' : 'Nuevo cliente'}</h2>
-    <div class="grid2">
-      <div><label>Tipo de persona</label><select id="cPersona"><option value="2" ${c?.tipo_persona !== '1' ? 'selected' : ''}>Persona natural</option><option value="1" ${c?.tipo_persona === '1' ? 'selected' : ''}>Empresa (persona jurídica)</option></select></div>
-      <div><label id="cLblNombre">Nombre completo *</label><input id="cNombre" value="${esc(c?.nombre || '')}" autofocus></div>
-      <div><label>Tipo de documento</label><select id="cTipoDoc">${Object.entries(TIPOS_DOC).map(([k, v]) => `<option value="${k}" ${(c?.tipo_documento || pre.tipo || '13') === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
-      <div><label>Número de documento</label><div class="grupo"><input id="cDoc" value="${esc(c?.documento || pre.documento || '')}" placeholder="Sin dígito de verificación" inputmode="numeric">${E.tienda?.fe_activa ? `<button class="btn btn-sm" id="cDian" type="button" title="Trae el nombre y el correo registrados en la DIAN">Consultar DIAN</button>` : ''}</div><p class="small muted" id="cDianEstado" style="margin:4px 0 0"></p></div>
-      <div><label>Teléfono (WhatsApp)</label><input id="cTel" value="${esc(c?.telefono || '')}" placeholder="3001234567"></div>
-      <div><label>Correo (para enviarle la factura)</label><input type="email" id="cEmail" value="${esc(c?.email || '')}"></div>
+    <div class="tipo-persona" role="radiogroup" aria-label="Tipo de cliente">
+      <span>Tipo:</span>
+      <label><input type="radio" name="cTipo" value="2" ${empresa0 ? '' : 'checked'}> Persona</label>
+      <label><input type="radio" name="cTipo" value="1" ${empresa0 ? 'checked' : ''}> Empresa</label>
     </div>
-    <div class="seccion-modal">Datos para factura electrónica</div>
-    <div class="grid2">
-      <div><label>Dígito de verificación (solo NIT)</label><input id="cDv" value="${esc(c?.dv || '')}" maxlength="1" inputmode="numeric"></div>
-      <div><label>Nombre comercial (opcional)</label><input id="cComercial" value="${esc(c?.nombre_comercial || '')}"></div>
-      <div><label>Responsabilidad fiscal</label><select id="cResp">${Object.entries(RESPONSABILIDADES).map(([k, v]) => `<option value="${k}" ${(c?.responsabilidad || 'R-99-PN') === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
-      <div><label>Tributo</label><select id="cTrib">${Object.entries(TRIBUTOS).map(([k, v]) => `<option value="${k}" ${(c?.tributo || 'ZZ') === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
-      <div><label>Dirección</label><input id="cDir" value="${esc(c?.direccion || '')}"></div>
-      <div><label>Municipio (con código DANE)</label><input id="cMun" list="listaMunicipios" value="${esc(c?.municipio || '')}" placeholder="Ej: Cúcuta (54001)"><datalist id="listaMunicipios">${MUNICIPIOS.map(m => `<option value="${m}">`).join('')}</datalist></div>
+    <div class="fila-doc">
+      <div><label for="cTipoDoc">Tipo de documento *</label><select id="cTipoDoc">${Object.entries(TIPOS_DOC).map(([k, v]) => `<option value="${k}" ${(c?.tipo_documento || pre.tipo || (empresa0 ? '31' : '13')) === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+      <div><label for="cDoc">Nro. identificación</label><input id="cDoc" value="${esc(c?.documento || pre.documento || '')}" inputmode="numeric" autocomplete="off" placeholder="Sin puntos ni DV"></div>
+      <div class="col-dv"><label for="cDv">DV</label><input id="cDv" value="${esc(c?.dv || '')}" maxlength="1" inputmode="numeric"></div>
+      <div class="col-auto"><label class="oculto-visual">Autocompletar</label><button class="btn" id="cDian" type="button" ${fe ? '' : 'disabled'} title="${fe ? 'Trae el nombre y el correo registrados en la DIAN' : 'Necesita la facturación electrónica activa'}">${ico('buscar')}Autocompletar datos</button></div>
     </div>
-    <p class="small muted" style="margin:8px 0 0">Estos datos solo se necesitan cuando el cliente pide factura electrónica a su nombre. Si no sabes la responsabilidad o el tributo, deja los valores que vienen. El municipio debe llevar su código de 5 números; si no está en la lista, escríbelo así: Nombre (código).</p>
-    <div class="modal-acciones"><button class="btn" data-cerrar>Cancelar</button><button class="btn btn-primary" id="cGuardar">Guardar</button></div>`);
+    <p class="small muted" id="cDianEstado" style="margin:4px 0 0">${fe ? 'Escribe el número y presiona Autocompletar para traer los datos de la DIAN.' : ''}</p>
+    <div class="grid2" id="cZonaPersona">
+      <div><label for="cNombres">Nombres *</label><input id="cNombres" value="${esc(partes.nombres)}"></div>
+      <div><label for="cApellidos">Apellidos</label><input id="cApellidos" value="${esc(partes.apellidos)}"></div>
+    </div>
+    <div class="grid2" id="cZonaEmpresa">
+      <div><label for="cRazon">Razón social *</label><input id="cRazon" value="${esc(empresa0 ? c?.nombre || '' : '')}"></div>
+      <div><label for="cComercial">Nombre comercial</label><input id="cComercial" value="${esc(c?.nombre_comercial || '')}"></div>
+    </div>
+    <div class="seccion-modal">Datos de contacto para facturación y envío</div>
+    <div class="grid2">
+      <div><label for="cEmail">Correo electrónico</label><input type="email" id="cEmail" value="${esc(c?.email || '')}" placeholder="Para enviarle la factura"></div>
+      <div><label for="cTel">Teléfono / Celular</label><input id="cTel" value="${esc(c?.telefono || '')}" inputmode="tel" placeholder="3001234567"></div>
+      <div><label for="cDir">Dirección</label><input id="cDir" value="${esc(c?.direccion || '')}"></div>
+      <div><label for="cMun">Municipio</label><input id="cMun" list="listaMunicipios" value="${esc(c?.municipio || '')}" placeholder="Ej: Cúcuta (54001)"><datalist id="listaMunicipios">${MUNICIPIOS.map(x => `<option value="${x}">`).join('')}</datalist></div>
+    </div>
+    <details class="datos-fiscales" ${c && (c.responsabilidad && c.responsabilidad !== 'R-99-PN' || c.tributo && c.tributo !== 'ZZ') ? 'open' : ''}>
+      <summary>Datos fiscales (responsabilidad y tributo)</summary>
+      <div class="grid2">
+        <div><label for="cResp">Responsabilidad fiscal</label><select id="cResp">${Object.entries(RESPONSABILIDADES).map(([k, v]) => `<option value="${k}" ${(c?.responsabilidad || 'R-99-PN') === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+        <div><label for="cTrib">Tributo</label><select id="cTrib">${Object.entries(TRIBUTOS).map(([k, v]) => `<option value="${k}" ${(c?.tributo || 'ZZ') === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+      </div>
+      <p class="small muted" style="margin:6px 0 0">Si no los conoces, deja los valores que vienen: sirven para la mayoría de personas.</p>
+    </details>
+    <div class="modal-acciones">${c && esDueno() ? `<button class="btn btn-danger" id="cEliminar" type="button" style="margin-right:auto">Eliminar cliente</button>` : ''}<button class="btn" data-cerrar>Cancelar</button><button class="btn btn-primary" id="cGuardar">Guardar</button></div>`, { ancho: true });
   const el = s => m.el.querySelector(s);
-  const persona = () => {
-    const empresa = el('#cPersona').value === '1';
-    el('#cLblNombre').textContent = empresa ? 'Razón social *' : 'Nombre completo *';
-    if (empresa && el('#cTipoDoc').value === '13') el('#cTipoDoc').value = '31';
+  const tipo = () => m.el.querySelector('[name="cTipo"]:checked').value;
+  const esNit = () => el('#cTipoDoc').value === '31';
+  const pintarTipo = () => {
+    const emp = tipo() === '1';
+    el('#cZonaPersona').classList.toggle('hidden', emp);
+    el('#cZonaEmpresa').classList.toggle('hidden', !emp);
+    if (emp && el('#cTipoDoc').value === '13') el('#cTipoDoc').value = '31';
+    if (!emp && el('#cTipoDoc').value === '31') el('#cTipoDoc').value = '13';
+    pintarDv();
   };
-  el('#cPersona').onchange = persona;
-  const dianEstado = (t, tipo) => { const p = el('#cDianEstado'); p.textContent = t; p.style.color = tipo === 'ok' ? 'var(--ok)' : tipo === 'error' ? 'var(--danger, #c0392b)' : ''; };
+  const pintarDv = () => {
+    el('.col-dv').classList.toggle('apagado', !esNit());
+    if (esNit()) { const dv = dvNit(el('#cDoc').value); if (dv && !el('#cDv').dataset.manual) el('#cDv').value = dv; }
+    else el('#cDv').value = '';
+  };
+  m.el.querySelectorAll('[name="cTipo"]').forEach(r => r.onchange = pintarTipo);
+  el('#cTipoDoc').onchange = pintarDv;
+  el('#cDv').oninput = () => { el('#cDv').dataset.manual = '1'; };
+  el('#cDoc').addEventListener('input', () => { el('#cDv').dataset.manual = ''; pintarDv(); });
+  pintarTipo();
+
+  const dianEstado = (t, tipoMsg) => { const p = el('#cDianEstado'); p.textContent = t; p.style.color = tipoMsg === 'ok' ? 'var(--ok)' : tipoMsg === 'error' ? 'var(--danger)' : ''; };
   const consultar = async () => {
     const doc = soloNumeros(el('#cDoc').value);
-    if (doc.length < 5) return dianEstado('Escribe el número de documento completo.', 'error');
+    if (doc.length < 5) return dianEstado('Escribe el número de identificación completo.', 'error');
     const otro = clientePorDoc(doc, c?.id);
     if (otro) return dianEstado(`Ese documento ya está guardado como ${otro.nombre}.`, 'error');
-    const btn = el('#cDian'); if (btn) btn.disabled = true;
+    const btn = el('#cDian'); btn.disabled = true;
     dianEstado('Consultando en la DIAN…');
     try {
       const r = await consultarDian(el('#cTipoDoc').value, doc);
-      if (!r?.encontrado) dianEstado('La DIAN no tiene datos públicos de ese documento. Escribe el nombre a mano.');
+      if (!r?.encontrado) dianEstado(r?.pruebas
+        ? 'La tienda está en modo pruebas: ahí la DIAN solo responde documentos de prueba (por ejemplo cédula 1399995). Con la facturación en producción se consultan cédulas reales. Por ahora escribe los datos a mano.'
+        : 'La DIAN no tiene datos públicos de ese documento. Escribe los datos a mano.');
       else {
-        if (r.nombre) el('#cNombre').value = r.nombre;
+        if (tipo() === '1') el('#cRazon').value = r.nombre || el('#cRazon').value;
+        else if (r.nombre) { const p = partirNombre(r.nombre); el('#cNombres').value = p.nombres; el('#cApellidos').value = p.apellidos; }
         if (r.email && !el('#cEmail').value.trim()) el('#cEmail').value = r.email;
-        dianEstado(`Datos traídos de la DIAN${r.email ? '' : ' (sin correo registrado)'}. Revisa y completa dirección y teléfono.`, 'ok');
+        dianEstado(`Datos traídos de la DIAN${r.email ? '' : ' (sin correo registrado)'}. Revisa nombres y apellidos y completa el contacto.`, 'ok');
         el('#cTel').focus();
       }
     } catch (e) { dianEstado(e.message, 'error'); }
-    if (btn) btn.disabled = false;
+    btn.disabled = !fe;
   };
-  if (el('#cDian')) {
+  if (fe) {
     el('#cDian').onclick = consultar;
     el('#cDoc').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); consultar(); } });
     if (pre.consultar && !c) setTimeout(consultar, 60);
   }
+  setTimeout(() => (el('#cDoc').value ? (tipo() === '1' ? el('#cRazon') : el('#cNombres')) : el('#cDoc')).focus(), 40);
+
+  el('#cEliminar')?.addEventListener('click', async () => {
+    if (!await preguntar('Eliminar cliente', `¿Eliminar a ${c.nombre}? Si tiene ventas registradas, se archiva: deja de aparecer en las listas pero sus ventas y facturas se conservan.`, { ok: 'Eliminar', peligro: true })) return;
+    const { data, error } = await db.rpc('eliminar_cliente', { p_cliente: c.id });
+    if (error) return aviso(errorTexto(error), 'error');
+    m.cerrar(); await cargarDatos();
+    aviso(data === 'archivado' ? `${c.nombre} quedó archivado (tenía ventas)` : `${c.nombre} eliminado`, 'ok');
+    if (E.vista === 'clientes') verClientes(); else alGuardar && alGuardar(null);
+  });
+
   el('#cGuardar').onclick = async () => {
+    const emp = tipo() === '1';
+    const nombres = el('#cNombres').value.trim().replace(/\s+/g, ' '), apellidos = el('#cApellidos').value.trim().replace(/\s+/g, ' ');
+    const razon = el('#cRazon').value.trim().replace(/\s+/g, ' ');
+    const documento = soloNumeros(el('#cDoc').value) || null;
     const datos = {
-      nombre: el('#cNombre').value.trim(), telefono: el('#cTel').value.trim() || null,
-      documento: el('#cDoc').value.trim().replace(/\s/g, '') || null, tipo_documento: el('#cTipoDoc').value, tipo_persona: el('#cPersona').value,
-      email: el('#cEmail').value.trim().toLowerCase() || null, direccion: el('#cDir').value.trim() || null,
-      dv: el('#cDv').value.trim() || null, nombre_comercial: el('#cComercial').value.trim() || null, responsabilidad: el('#cResp').value, tributo: el('#cTrib').value, municipio: el('#cMun').value.trim() || null,
+      nombre: emp ? razon : `${nombres} ${apellidos}`.trim(),
+      nombres: emp ? null : nombres || null, apellidos: emp ? null : apellidos || null,
+      tipo_persona: emp ? '1' : '2', tipo_documento: el('#cTipoDoc').value, documento,
+      dv: esNit() ? (el('#cDv').value.trim() || dvNit(documento)) || null : null,
+      nombre_comercial: emp ? el('#cComercial').value.trim() || null : null,
+      telefono: el('#cTel').value.trim() || null, email: el('#cEmail').value.trim().toLowerCase() || null,
+      direccion: el('#cDir').value.trim() || null, municipio: el('#cMun').value.trim() || null,
+      responsabilidad: el('#cResp').value, tributo: el('#cTrib').value,
     };
-    if (!datos.nombre) return aviso('Escribe el nombre del cliente.', 'error');
+    if (emp && !razon) return aviso('Escribe la razón social de la empresa.', 'error');
+    if (!emp && !nombres) return aviso('Escribe los nombres del cliente.', 'error');
+    if (emp && !documento) return aviso('Escribe el NIT de la empresa.', 'error');
     if (datos.email && !/^\S+@\S+\.\S+$/.test(datos.email)) return aviso('El correo no es válido.', 'error');
-    const repetido = datos.documento && clientePorDoc(datos.documento, c?.id);
+    const repetido = documento && clientePorDoc(documento, c?.id);
     if (repetido) return aviso(`Ese documento ya está registrado a nombre de ${repetido.nombre}.`, 'error');
-    if (datos.documento && datos.municipio && !/\b\d{5}\b/.test(datos.municipio)) return aviso('Escribe el municipio con su código DANE de 5 números, por ejemplo Cúcuta (54001).', 'error');
+    if (documento && datos.municipio && !/\b\d{5}\b/.test(datos.municipio) && !MUNICIPIOS.some(x => x.toLowerCase().startsWith(datos.municipio.toLowerCase())))
+      return aviso('Elige el municipio de la lista o escríbelo con su código DANE, por ejemplo Cúcuta (54001).', 'error');
+    const coincide = datos.municipio && MUNICIPIOS.find(x => x.toLowerCase().startsWith(datos.municipio.toLowerCase() + ' ('));
+    if (coincide) datos.municipio = coincide;
+    const btn = el('#cGuardar'); btn.disabled = true;
     const r = c ? await db.from('clientes').update(datos).eq('id', c.id).select().single() : await db.from('clientes').insert(datos).select().single();
-    if (r.error) return aviso(errorTexto(r.error), 'error');
-    m.cerrar(); await cargarDatos(); aviso('Cliente guardado', 'ok'); alGuardar && alGuardar(r.data);
+    btn.disabled = false;
+    if (r.error) return aviso(/nombres|apellidos/.test(r.error.message) ? 'Falta correr la actualización de la base de datos (migracion_v8.sql).' : errorTexto(r.error), 'error');
+    m.cerrar(); await cargarDatos(); aviso(c ? 'Cliente actualizado' : 'Cliente guardado', 'ok'); alGuardar && alGuardar(r.data);
   };
+}
+
+async function eliminarCliente(c) {
+  if (c.saldo > 0) return aviso(`${c.nombre} debe ${pesos(c.saldo)}. Regístrale el abono antes de eliminarlo.`, 'error');
+  if (!await preguntar('Eliminar cliente', `¿Eliminar a ${c.nombre}? Si tiene ventas registradas, se archiva: deja de aparecer en las listas pero sus ventas y facturas se conservan.`, { ok: 'Eliminar', peligro: true })) return;
+  const { data, error } = await db.rpc('eliminar_cliente', { p_cliente: c.id });
+  if (error) return aviso(errorTexto(error), 'error');
+  await cargarDatos(); verClientes();
+  aviso(data === 'archivado' ? `${c.nombre} quedó archivado (tenía ventas)` : `${c.nombre} eliminado`, 'ok');
 }
 
 function modalAbono(c) {
@@ -2226,7 +2284,7 @@ async function modalHistorialCliente(c) {
     db.from('abonos').select('fecha, valor, medio_pago, nota').eq('cliente_id', c.id).order('fecha', { ascending: false }).limit(100),
   ]);
   const filas = [...(v.data || []).map(x => ({ f: x.fecha, d: `Fiado · venta #${x.numero}${x.estado === 'anulada' ? ' (anulada)' : ''}`, cargo: x.estado === 'anulada' ? 0 : Number(x.total) })),
-                 ...(a.data || []).map(x => ({ f: x.fecha, d: `Abono · ${MEDIOS[x.medio_pago] || x.medio_pago}${x.nota ? ' · ' + x.nota : ''}`, abono: Number(x.valor) }))].sort((x, y) => new Date(y.f) - new Date(x.f));
+                 ...(a.data || []).map(x => ({ f: x.fecha, d: `${x.medio_pago === 'nota_credito' ? 'Nota crédito' : 'Abono · ' + (MEDIOS[x.medio_pago] || x.medio_pago)}${x.nota ? ' · ' + x.nota : ''}`, abono: Number(x.valor) }))].sort((x, y) => new Date(y.f) - new Date(x.f));
   const el = m.el.querySelector('#hcLista');
   el.className = '';
   el.innerHTML = filas.length ? `<div class="tabla-wrap"><table><thead><tr><th>Fecha</th><th>Detalle</th><th class="num">Fiado</th><th class="num">Abono</th></tr></thead><tbody>${filas.map(x =>
@@ -2400,7 +2458,7 @@ function repVentas(A, cont) {
     </div><div id="fvTabla"></div>`;
   const pintar = () => {
     const q = f.q.trim().toLowerCase();
-    const cliente = id => E.clientes.find(c => c.id === id)?.nombre || '';
+    const cliente = id => (E.clientesTodos || E.clientes).find(c => c.id === id)?.nombre || '';
     const lista = A.ventas.filter(v =>
       (!q || String(v.numero) === q.replace('#', '') || cliente(v.cliente_id).toLowerCase().includes(q)) &&
       (!f.medio || v.medio_pago === f.medio) &&
@@ -2415,17 +2473,19 @@ function repVentas(A, cont) {
         <td>${badgeComprobante(v)}</td>
         <td>${esc(nombreUsuario(v.usuario_id))}</td>
         <td class="num"><b>${pesos(v.total)}</b>${v.estado === 'anulada' ? '<br><span class="badge bajo">Anulada</span>' : ''}</td>
-        <td class="acciones"><button class="link" data-reimp="${v.id}">Tiquete</button>${v.fe_url ? `<a class="link" href="${esc(v.fe_url)}" target="_blank" rel="noopener">Ver factura</a>` : ''}${E.tienda.fe_activa && v.estado === 'activa' && v.fe_estado !== 'validada' ? `<button class="link" data-facturar="${v.id}">${v.fe_estado === 'error' ? 'Reintentar factura' : 'Facturar'}</button>` : ''}${v.estado === 'activa' ? `<button class="link danger" data-anular="${v.id}">Anular</button>` : ''}</td></tr>`).join(''), 'No hay ventas con esos filtros.');
+        <td class="acciones"><button class="link" data-reimp="${v.id}">Tiquete</button>${v.fe_url ? `<a class="link" href="${esc(v.fe_url)}" target="_blank" rel="noopener">Ver factura</a>` : ''}${E.tienda.fe_activa && v.estado === 'activa' && v.fe_estado !== 'validada' ? `<button class="link" data-facturar="${v.id}">${v.fe_estado === 'error' ? 'Reintentar factura' : 'Facturar'}</button>` : ''}${E.tienda.fe_activa && esDueno() && v.estado === 'activa' && v.fe_estado === 'validada' ? `<button class="link" data-nc="${v.id}">Nota crédito</button>` : ''}${v.estado === 'activa' ? `<button class="link danger" data-anular="${v.id}">Anular</button>` : ''}<span data-ncs="${v.id}"></span></td></tr>`).join(''), 'No hay ventas con esos filtros.');
     const ventaPorId = id => A.ventas.find(v => v.id === Number(id));
     $('fvTabla').querySelectorAll('[data-reimp]').forEach(b => b.onclick = () => {
       const v = ventaPorId(b.dataset.reimp);
-      imprimirTiquete({ ...v, cajero: nombreUsuario(v.usuario_id), cliente: E.clientes.find(c => c.id === v.cliente_id),
+      imprimirTiquete({ ...v, cajero: nombreUsuario(v.usuario_id), cliente: (E.clientesTodos || E.clientes).find(c => c.id === v.cliente_id),
         lineas: (v.movimientos || []).filter(m => m.tipo === 'venta').map(m => ({ nombre: prodPorId(m.producto_id)?.nombre || '—', cantidad: Number(m.cantidad), precio: Number(m.precio_unitario) })) });
     });
     $('fvTabla').querySelectorAll('[data-facturar]').forEach(b => b.onclick = () => modalFacturarVenta(ventaPorId(b.dataset.facturar), () => { calcularAvisos(true); verReportes(); }));
+    $('fvTabla').querySelectorAll('[data-nc]').forEach(b => b.onclick = () => modalNotaCredito(ventaPorId(b.dataset.nc), async () => { await cargarDatos(); verReportes(); }));
+    pintarNotasEnVentas(lista.slice(0, 200).filter(v => v.fe_estado === 'validada').map(v => v.id));
     $('fvTabla').querySelectorAll('[data-anular]').forEach(b => b.onclick = async () => {
       const v = ventaPorId(b.dataset.anular);
-      const motivo = await preguntar(`Anular venta #${v.numero}`, `Total ${pesos(v.total)}. Los productos regresan al inventario y la venta deja de contar en los reportes.${v.fe_estado === 'validada' ? `\n\nOjo: esta venta tiene la factura electrónica ${v.fe_numero}. Anularla aquí NO la anula ante la DIAN; para eso debes emitir una nota crédito en Factus.` : ''}`, { ok: 'Anular venta', peligro: true, campo: 'Motivo' });
+      const motivo = await preguntar(`Anular venta #${v.numero}`, `Total ${pesos(v.total)}. Los productos regresan al inventario y la venta deja de contar en los reportes.${v.fe_estado === 'validada' ? `\n\nOjo: esta venta tiene la factura electrónica ${v.fe_numero}. Anularla aquí NO la anula ante la DIAN; para eso usa el botón "Nota crédito".` : ''}`, { ok: 'Anular venta', peligro: true, campo: 'Motivo' });
       if (!motivo) return;
       const { error } = await db.rpc('anular_venta', { p_venta: v.id, p_motivo: motivo === true ? null : motivo });
       if (error) return aviso(errorTexto(error), 'error');
@@ -2557,6 +2617,87 @@ function modalFacturarVenta(v, alTerminar) {
       aviso(`Factura ${r.numero} generada`, 'ok');
     } catch (e) { Object.assign(vv, { fe_estado: 'error', fe_error: e.message }); btn.disabled = false; btn.textContent = 'Reintentar'; }
     m.el.querySelector('#fEstado').innerHTML = htmlFe(vv).replace('data-refacturar', 'data-x hidden');
+  };
+}
+
+// Muestra las notas crédito de cada venta en la tabla de ventas
+async function pintarNotasEnVentas(ids) {
+  if (!ids.length) return;
+  const { data, error } = await db.from('notas_credito').select('id, venta_id, numero, estado, concepto, url, total, inventario_aplicado').in('venta_id', ids);
+  if (error || !data) return;
+  for (const n of data) {
+    const cont = document.querySelector(`[data-ncs="${n.venta_id}"]`); if (!cont) continue;
+    if (n.estado === 'validada') cont.insertAdjacentHTML('beforeend', n.url ? `<a class="link" href="${esc(n.url)}" target="_blank" rel="noopener">NC ${esc(n.numero)}</a>` : `<span class="badge neutro">NC ${esc(n.numero)}</span>`);
+    if (n.estado === 'validada' && !n.inventario_aplicado && esDueno()) {
+      const b = document.createElement('button'); b.className = 'link'; b.textContent = 'Aplicar NC en inventario';
+      b.onclick = async () => { const { error: e } = await db.rpc('aplicar_nota_credito', { p_nc: n.id, p_caja: E.caja?.id || null }); if (e) return aviso(errorTexto(e), 'error'); aviso('Nota crédito aplicada', 'ok'); await cargarDatos(); verReportes(); };
+      cont.appendChild(b);
+    }
+  }
+}
+
+// Nota crédito: devolución de productos o anulación de la factura electrónica
+async function modalNotaCredito(v, alTerminar) {
+  const lineas = (v.movimientos || []).filter(x => x.tipo === 'venta');
+  let hecho = false;
+  const { data: previas } = await db.from('notas_credito').select('numero, estado, concepto, items, total, url').eq('venta_id', v.id);
+  const validas = (previas || []).filter(n => n.estado === 'validada');
+  const devuelto = {};
+  validas.forEach(n => (n.items || []).forEach(it => { devuelto[it.producto_id] = (devuelto[it.producto_id] || 0) + Number(it.cantidad); }));
+  const hayParciales = validas.length > 0;
+  const fiado = v.medio_pago === 'fiado';
+  const dinero = fiado ? 'Se descuenta de la deuda del cliente.' : E.caja ? 'Se registra la salida del dinero en tu caja abierta.' : 'No tienes caja abierta: devuelve el dinero y regístralo como gasto si sale de la caja.';
+  const m = abrirModal(`<h2>Nota crédito de la factura ${esc(v.fe_numero)}</h2>
+    <p class="muted">Venta #${v.numero}, ${pesos(v.total)}, ${esc(textoPagos(v))}</p>
+    ${validas.length ? `<div class="fe-caja ok" style="margin:0 0 10px"><b>Notas crédito anteriores</b><span class="small">${validas.map(n => `${esc(n.numero)} por ${pesos(n.total)}`).join(', ')}</span></div>` : ''}
+    <label>Motivo</label>
+    <div class="nc-motivos">
+      <label><input type="radio" name="ncConcepto" value="1" ${hayParciales ? 'checked' : ''}><span><b>Devolución de productos</b><span class="small muted">El cliente devuelve parte de lo que compró.</span></span></label>
+      <label><input type="radio" name="ncConcepto" value="2" ${hayParciales ? 'disabled' : 'checked'}><span><b>Anular la factura</b><span class="small muted">${hayParciales ? 'No disponible: ya tiene devoluciones.' : 'Se anula toda la venta ante la DIAN.'}</span></span></label>
+    </div>
+    <div id="ncItems">${tablaSimple('<th>Producto</th><th class="num">Vendido</th><th class="num">Ya devuelto</th><th class="num">Devuelve</th>', lineas.map(x => {
+      const disp = Number(x.cantidad) - (devuelto[x.producto_id] || 0);
+      return `<tr><td>${esc(prodPorId(x.producto_id)?.nombre || '—')}</td><td class="num">${numero(x.cantidad)}</td><td class="num">${numero(devuelto[x.producto_id] || 0)}</td><td class="num"><input type="number" min="0" max="${disp}" step="any" data-ncp="${x.producto_id}" value="0" ${disp > 0 ? '' : 'disabled'} aria-label="Cantidad que devuelve"></td></tr>`;
+    }).join(''))}<p class="small muted" style="margin:6px 0 0">Valor aproximado a devolver: <b id="ncValor">$0</b></p></div>
+    <label for="ncMotivo">Detalle (opcional)</label><input id="ncMotivo" maxlength="200" placeholder="Ej: producto vencido, cobro equivocado">
+    <p class="small muted" style="margin:10px 0 0">Los productos regresan al inventario. ${dinero}</p>
+    <div id="ncEstado"></div>
+    <div class="modal-acciones"><button class="btn" data-cerrar>Cerrar</button><button class="btn btn-primary" id="ncGenerar">Generar nota crédito</button></div>`, { ancho: true, alCerrar: () => { if (hecho && alTerminar) alTerminar(); } });
+  const el = s => m.el.querySelector(s);
+  m.el.querySelector('#ncItems table')?.classList.add('nc-tabla');
+  const concepto = () => m.el.querySelector('[name="ncConcepto"]:checked')?.value;
+  const subtotal = Number(v.subtotal) || 0, factor = subtotal > 0 ? (Number(v.total) / subtotal) : 1;
+  const calcular = () => {
+    let t = 0;
+    m.el.querySelectorAll('[data-ncp]').forEach(i => { const x = lineas.find(l => l.producto_id === Number(i.dataset.ncp)); t += Math.max(0, Number(i.value) || 0) * Number(x.precio_unitario) * factor; });
+    el('#ncValor').textContent = pesos(Math.round(t));
+  };
+  const pintar = () => { el('#ncItems').classList.toggle('hidden', concepto() !== '1'); el('#ncGenerar').textContent = concepto() === '2' ? 'Anular factura' : 'Generar nota crédito'; };
+  m.el.querySelectorAll('[name="ncConcepto"]').forEach(r => r.onchange = pintar);
+  m.el.querySelectorAll('[data-ncp]').forEach(i => i.oninput = calcular);
+  pintar();
+  const estado = html => { el('#ncEstado').innerHTML = html; };
+  el('#ncGenerar').onclick = async () => {
+    const c = concepto();
+    const items = [...m.el.querySelectorAll('[data-ncp]')].map(i => ({ producto_id: Number(i.dataset.ncp), cantidad: Number(i.value) || 0, max: Number(i.max) })).filter(x => x.cantidad > 0);
+    if (c === '1') {
+      if (!items.length) return aviso('Escribe cuánto devuelve de cada producto.', 'error');
+      const malo = items.find(x => x.cantidad > x.max + 1e-9);
+      if (malo) return aviso(`De ${prodPorId(malo.producto_id)?.nombre} solo se pueden devolver ${numero(malo.max)}.`, 'error');
+    } else if (!await preguntar('Anular factura', `Se emitirá una nota crédito por ${pesos(v.total)} que anula la factura ${v.fe_numero} ante la DIAN, y la venta #${v.numero} queda anulada. Esto no se puede deshacer.`, { ok: 'Anular factura', peligro: true })) return;
+    const btn = el('#ncGenerar'); btn.disabled = true;
+    estado('<div class="fe-caja espera"><b>Generando nota crédito…</b><span class="small">Validando con la DIAN, espera unos segundos.</span></div>');
+    try {
+      const r = await llamarServicio({ accion: 'nota_credito', venta_id: v.id, concepto: c, motivo: el('#ncMotivo').value, items: items.map(({ producto_id, cantidad }) => ({ producto_id, cantidad })) });
+      const { error } = await db.rpc('aplicar_nota_credito', { p_nc: r.nc_id, p_caja: fiado ? null : (E.caja?.id || null) });
+      estado(`<div class="fe-caja ok"><b>Nota crédito ${esc(r.numero)} por ${pesos(r.total)}</b><span class="small">${error ? 'Validada por la DIAN, pero no se pudo aplicar en el inventario: ' + esc(errorTexto(error)) + '. Usa "Aplicar NC en inventario" en la venta.' : c === '2' ? 'Factura anulada. Los productos regresaron al inventario.' : 'Los productos regresaron al inventario.'}</span>${r.url ? `<br><a class="link" style="padding-left:0" href="${esc(r.url)}" target="_blank" rel="noopener">Ver nota crédito</a>` : ''}</div>`);
+      btn.classList.add('hidden');
+      aviso(`Nota crédito ${r.numero} generada`, 'ok');
+      hecho = true;
+    } catch (e) {
+      estado(`<div class="fe-caja error"><b>No se generó la nota crédito</b><span class="small">${esc(e.message)}</span></div>`);
+      btn.disabled = false; btn.textContent = 'Reintentar';
+    }
   };
 }
 

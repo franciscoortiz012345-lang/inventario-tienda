@@ -435,30 +435,29 @@ tr.clic{cursor:pointer}
 .sus-fila{border:1px solid var(--line);border-radius:var(--r-sm);padding:12px 14px;margin-top:10px}
 .sus-fila label{margin-top:10px}
 
-/* ---------- Más sencillo: acciones grandes, primeros pasos y ayuda por pantalla ---------- */
-.acciones-grandes{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
-.accion-g{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:18px;border-radius:var(--r);border:1.5px solid var(--line);background:var(--card);color:var(--text);cursor:pointer;font:inherit;transition:border-color .15s}
-.accion-g:hover{border-color:var(--brand)}
-.accion-g svg{width:26px;height:26px;color:var(--brand-strong);margin-bottom:6px}
-.accion-g b{font-size:1.08rem}
-.accion-g small{color:var(--muted);font-size:.86rem}
-.accion-g.principal{background:var(--brand);border-color:var(--brand);color:#fff}
-.accion-g.principal svg,.accion-g.principal small{color:#fff}
-.accion-g.principal small{opacity:.88}
-.accion-g kbd{background:rgba(255,255,255,.2);border:0;color:inherit}
-.primeros{margin-bottom:16px}
-.pasos{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px}
-.pasos li{display:flex;align-items:center;gap:14px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-sm)}
-.pasos li>div{flex:1;min-width:0}
-.pasos li small{display:block;color:var(--muted);font-size:.85rem}
-.pasos li.hecho{opacity:.6}
-.pasos li.hecho b{text-decoration:line-through}
-.num-paso{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:var(--line-2);color:var(--text)}
-.pasos li.hecho .num-paso{background:var(--brand);color:#fff}
-.ayuda{display:flex;gap:14px;align-items:flex-start;padding:14px 16px;margin:0 0 16px;border-radius:var(--r);background:var(--brand-soft);border:1px solid var(--brand-line)}
-.ayuda-ico,.btn-ayuda{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:var(--brand);color:#fff}
-.btn-ayuda{padding:0;min-height:0;border:none;width:36px;height:36px;font-size:1rem}
-.ayuda-txt{flex:1;min-width:0}
-.ayuda ol{margin:6px 0 0;padding-left:20px;color:var(--text);font-size:.92rem;line-height:1.5}
-@media (max-width:900px){.acciones-grandes{grid-template-columns:1fr 1fr}}
-@media (max-width:560px){.ayuda{flex-wrap:wrap}.pasos li{flex-wrap:wrap}.accion-g{padding:14px}}
+/* ----- Formulario de cliente (v8) ----- */
+.tipo-persona{display:flex;align-items:center;gap:18px;margin:4px 0 14px;font-weight:600}
+.tipo-persona label{display:inline-flex;align-items:center;gap:7px;margin:0;font-weight:500;cursor:pointer}
+.tipo-persona input{width:18px;height:18px;accent-color:var(--brand);margin:0}
+.fila-doc{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.2fr) 64px auto;gap:12px;align-items:end}
+.fila-doc .col-dv.apagado input{opacity:.45}
+.fila-doc .col-auto .btn{white-space:nowrap;height:var(--alto-campo,auto)}
+.oculto-visual{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.datos-fiscales{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+.datos-fiscales summary{cursor:pointer;font-weight:600;font-size:.92rem;color:var(--muted)}
+.datos-fiscales[open] summary{margin-bottom:6px}
+@media (max-width:640px){
+  .fila-doc{grid-template-columns:minmax(0,1fr) 64px}
+  .fila-doc>div:first-child,.fila-doc .col-auto{grid-column:1/-1}
+  .fila-doc .col-auto .btn{width:100%}
+  .fila-doc .col-auto label{display:none}
+}
+/* ----- Nota crédito ----- */
+.nc-motivos{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0 12px}
+.nc-motivos label{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:var(--r);padding:12px;margin:0;cursor:pointer;font-weight:500}
+.nc-motivos label:has(input:checked){border-color:var(--brand);background:color-mix(in srgb,var(--brand) 7%,transparent)}
+.nc-motivos input{width:18px;height:18px;flex:none;margin:2px 0 0;accent-color:var(--brand)}
+.nc-motivos label>span{flex:1;min-width:0}
+.nc-motivos b{display:block}
+.nc-tabla input{width:90px;text-align:right}
+@media (max-width:640px){.nc-motivos{grid-template-columns:1fr}}

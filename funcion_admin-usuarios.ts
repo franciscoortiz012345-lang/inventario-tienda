@@ -29,6 +29,16 @@ const METODO_PAGO: Record<string, string> = { efectivo: '10', tarjeta: '48', neq
 // Unidad de la app → código de unidad de medida
 const UNIDAD: Record<string, string> = { unidad: '94', paquete: '94', kilo: 'KGM', libra: 'LBR' };
 
+const MUNICIPIOS_DANE: Record<string, string> = {'bogota': '11001', 'bogota dc': '11001', 'medellin': '05001', 'cali': '76001', 'barranquilla': '08001', 'cartagena': '13001', 'cucuta': '54001', 'villa del rosario': '54874', 'los patios': '54405', 'ocana': '54498', 'pamplona': '54518', 'bucaramanga': '68001', 'floridablanca': '68276', 'giron': '68307', 'piedecuesta': '68547', 'barrancabermeja': '68081', 'santa marta': '47001', 'valledupar': '20001', 'riohacha': '44001', 'monteria': '23001', 'sincelejo': '70001', 'soledad': '08758', 'malambo': '08433', 'ibague': '73001', 'neiva': '41001', 'villavicencio': '50001', 'tunja': '15001', 'duitama': '15238', 'sogamoso': '15759', 'pereira': '66001', 'dosquebradas': '66170', 'manizales': '17001', 'armenia': '63001', 'pasto': '52001', 'popayan': '19001', 'yopal': '85001', 'florencia': '18001', 'quibdo': '27001', 'arauca': '81001', 'soacha': '25754', 'chia': '25175', 'zipaquira': '25899', 'facatativa': '25269', 'fusagasuga': '25290', 'girardot': '25307', 'bello': '05088', 'itagui': '05360', 'envigado': '05266', 'rionegro': '05615', 'apartado': '05045', 'palmira': '76520', 'buenaventura': '76109', 'tulua': '76834', 'jamundi': '76364', 'cartago': '76147', 'buga': '76111', 'san andres': '88001', 'san gil': '68679'};
+// Código DANE (5 dígitos) a partir de lo escrito: '54001', 'Cúcuta (54001)' o solo 'CUCUTA'
+const codMun = (x: unknown): string | undefined => {
+  const t = String(x || '');
+  const n = (t.match(/\b\d{5}\b/) || [])[0];
+  if (n) return n;
+  const limpio = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z ]/g, ' ').replace(/\s+/g, ' ').trim();
+  return MUNICIPIOS_DANE[limpio] || MUNICIPIOS_DANE[limpio.replace(/ d c$/, '')];
+};
+
 function buscarLista(j: any): any[] {
   if (Array.isArray(j)) return j;
   if (Array.isArray(j?.data)) return j.data;
@@ -144,12 +154,10 @@ async function facturar(sb: any, userId: string, b: any) {
         ...(cli.telefono ? { phone: cli.telefono } : {}),
       };
       // Código DANE del municipio (5 dígitos): el del cliente o, si no tiene, el de la tienda
-      const codMun = (x: unknown) => (String(x || '').match(/\b\d{5}\b/) || [])[0];
-      const mun = codMun(cli.municipio) || codMun(ut.tiendas?.municipio);
-      if (!mun) return await fallar('Falta el código del municipio del cliente: son 5 números del DANE (por ejemplo 54001 para Cúcuta o 11001 para Bogotá). Agrégalo en Clientes y fiados, botón Editar, campo Municipio, y vuelve a intentar.');
-      customer.municipality_code = mun;
+      customer.municipality_code = codMun(cli.municipio) || codMun(ut.tiendas?.municipio) || '11001';
     } else {
-      customer = { identification_document_code: '13', identification: '222222222222', legal_organization_code: '2', names: 'Consumidor final', tribute_code: 'ZZ', responsibilities: ['R-99-PN'], country_code: 'CO' };
+      const munTienda = codMun(ut.tiendas?.municipio);
+      customer = { identification_document_code: '13', identification: '222222222222', legal_organization_code: '2', names: 'Consumidor final', tribute_code: 'ZZ', responsibilities: ['R-99-PN'], country_code: 'CO', municipality_code: munTienda || '11001' };
     }
 
     // Pago
@@ -200,6 +208,145 @@ async function facturar(sb: any, userId: string, b: any) {
   }
 }
 
+
+// =====================================================================
+// NOTA CRÉDITO (devolución parcial o anulación de una factura electrónica)
+// =====================================================================
+const CONCEPTOS_NC: Record<string, string> = { '1': 'Devolución de productos', '2': 'Anulación de la factura' };
+async function notaCredito(sb: any, userId: string, b: any) {
+  const { data: ut } = await sb.from('usuarios_tienda').select('tienda_id, rol, tiendas(estado, fe_activa)').eq('user_id', userId).maybeSingle();
+  if (!ut) return responder({ error: 'Tu cuenta no tiene tienda asignada.' }, 403);
+  if (ut.rol !== 'dueno') return responder({ error: 'Solo el dueño puede hacer notas crédito.' }, 403);
+  if (ut.tiendas?.estado !== 'activa') return responder({ error: 'La tienda está suspendida.' }, 403);
+  const { data: v } = await sb.from('ventas').select('*').eq('id', b.venta_id).maybeSingle();
+  if (!v || v.tienda_id !== ut.tienda_id) return responder({ error: 'Venta no encontrada.' }, 404);
+  if (v.fe_estado !== 'validada' || !v.fe_numero) return responder({ error: 'La venta no tiene factura electrónica validada.' }, 400);
+  if (v.estado === 'anulada') return responder({ error: 'La venta ya está anulada.' }, 400);
+  const concepto = String(b.concepto || '');
+  if (!CONCEPTOS_NC[concepto]) return responder({ error: 'Elige el motivo de la nota crédito.' }, 400);
+  const motivo = String(b.motivo || '').trim().slice(0, 300);
+
+  const { data: previas } = await sb.from('notas_credito').select('id, estado, items, concepto, creado_en').eq('venta_id', v.id);
+  if ((previas || []).some((n: any) => n.estado === 'pendiente' && Date.now() - new Date(n.creado_en).getTime() < 60000))
+    return responder({ error: 'Hay una nota crédito de esta venta procesándose. Espera un momento.' }, 409);
+  const validas = (previas || []).filter((n: any) => n.estado === 'validada');
+  if (validas.some((n: any) => n.concepto === '2')) return responder({ error: 'Esta factura ya fue anulada con nota crédito.' }, 400);
+  if (concepto === '2' && validas.length) return responder({ error: 'Esta factura ya tiene devoluciones. Para lo que falta, haz una devolución de productos.' }, 400);
+  const devuelto: Record<string, number> = {};
+  for (const n of validas) for (const it of n.items || []) devuelto[it.producto_id] = (devuelto[it.producto_id] || 0) + Number(it.cantidad);
+
+  const { data: movs } = await sb.from('movimientos').select('producto_id, cantidad, precio_unitario, iva, iva_excluido, productos(id, nombre, codigo_barras, unidad, iva, iva_excluido)').eq('venta_id', v.id).eq('tipo', 'venta');
+  if (!movs?.length) return responder({ error: 'La venta no tiene productos.' }, 400);
+
+  // Cantidades a acreditar
+  let pedidos: { producto_id: number; cantidad: number }[];
+  if (concepto === '2') pedidos = movs.map((m: any) => ({ producto_id: m.producto_id, cantidad: Number(m.cantidad) }));
+  else {
+    pedidos = (Array.isArray(b.items) ? b.items : []).map((x: any) => ({ producto_id: Number(x.producto_id), cantidad: r2(Number(x.cantidad)) })).filter((x: any) => x.cantidad > 0);
+    if (!pedidos.length) return responder({ error: 'Escribe la cantidad que el cliente devuelve.' }, 400);
+    for (const x of pedidos) {
+      const m = movs.find((mm: any) => mm.producto_id === x.producto_id);
+      if (!m) return responder({ error: 'Un producto no pertenece a esta venta.' }, 400);
+      const disponible = r2(Number(m.cantidad) - (devuelto[x.producto_id] || 0));
+      if (x.cantidad > disponible) return responder({ error: `De ${m.productos?.nombre || 'un producto'} solo se pueden devolver ${disponible}.` }, 400);
+    }
+  }
+
+  const subtotal = Number(v.subtotal) || 0, descuento = Number(v.descuento) || 0;
+  const tasaDesc = subtotal > 0 ? r2(descuento / subtotal * 100) : 0;
+  let calculado = 0;
+  const items = pedidos.map((x) => {
+    const m = movs.find((mm: any) => mm.producto_id === x.producto_id);
+    const p = m.productos || {};
+    const excluido = m.iva_excluido ?? !!p.iva_excluido;
+    const iva = excluido ? 0 : Number(m.iva ?? p.iva ?? 19);
+    const precio = r2(Number(m.precio_unitario) / (1 + iva / 100));
+    const baseItem = r2(precio * x.cantidad * (1 - tasaDesc / 100));
+    calculado += baseItem + r2(baseItem * iva / 100);
+    return {
+      code_reference: p.codigo_barras || `P${p.id}`, name: String(p.nombre || 'Producto').slice(0, 200),
+      quantity: f2(x.cantidad), discount_rate: f2(tasaDesc), price: f2(precio),
+      unit_measure_code: UNIDAD[p.unidad] || '94', standard_code: '999',
+      taxes: [excluido ? { code: '01', rate: '0.00', is_excluded: true } : { code: '01', rate: f2(iva) }],
+    };
+  });
+  // En la anulación se acredita exactamente el total de la venta
+  const total = concepto === '2' ? Number(v.total) : r2(calculado);
+
+  const { data: nc, error: eNc } = await sb.from('notas_credito').insert({
+    tienda_id: v.tienda_id, venta_id: v.id, concepto, motivo: motivo || null, items: pedidos, total, estado: 'pendiente', usuario_id: userId,
+  }).select().single();
+  if (eNc) return responder({ error: 'No se pudo registrar la nota crédito: ' + eNc.message }, 500);
+  const fallar = async (msg: string, estado = 400) => {
+    await sb.from('notas_credito').update({ estado: 'error', error: msg }).eq('id', nc.id);
+    return responder({ error: msg, nc_id: nc.id }, estado);
+  };
+
+  try {
+    const { base, cfg } = await configFactus(sb, v.tienda_id);
+    const tk = await tokenFactus(v.tienda_id, base, cfg);
+    const medio = v.medio_pago === 'mixto' && Array.isArray(v.pagos) && v.pagos[0] ? v.pagos[0].medio : v.medio_pago;
+    const cuerpo: any = {
+      reference_code: `T${v.tienda_id}-V${v.numero}-NC${nc.id}`,
+      correction_concept_code: concepto,
+      customization_id: '20',
+      bill_number: v.fe_numero,
+      observation: `${CONCEPTOS_NC[concepto]} · venta #${v.numero}${motivo ? ' · ' + motivo : ''}`.slice(0, 500),
+      payment_details: [{ payment_form: '1', payment_method_code: METODO_PAGO[medio] || '10', amount: f2(total) }],
+      items,
+    };
+    const redondeo = r2(total - calculado);
+    if (redondeo !== 0) cuerpo.cash_rounding_amount = f2(redondeo);
+    if (cfg.nc_range_id) cuerpo.numbering_range_id = Number(cfg.nc_range_id);
+    const r = await fetch(`${base}/v2/credit-notes/validate`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${tk}`, Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(cuerpo),
+    });
+    const j = await r.json().catch(() => ({}));
+    const d = j?.data;
+    if (!r.ok || !d?.number) {
+      const t = textoError(j);
+      if (/numbering|rango/i.test(t)) return await fallar('Factus pide el rango de numeración de notas crédito. Elígelo en el panel de administración, en Facturación electrónica de esta empresa. (' + t + ')');
+      return await fallar('Factus no aceptó la nota crédito: ' + t);
+    }
+    if (d.is_validated === false) {
+      await sb.from('notas_credito').update({ numero: d.number, cufe: d.cufe, url: d.links?.public_url || null }).eq('id', nc.id);
+      return await fallar('La DIAN no validó la nota crédito: ' + textoError(j));
+    }
+    await sb.from('notas_credito').update({ estado: 'validada', numero: d.number, cufe: d.cufe || null, url: d.links?.public_url || null, error: null }).eq('id', nc.id);
+    return responder({ ok: true, nc_id: nc.id, numero: d.number, cufe: d.cufe, url: d.links?.public_url, total });
+  } catch (e) {
+    return await fallar((e as Error).message || String(e), 500);
+  }
+}
+
+// Consulta en la DIAN (a través de Factus) el nombre y el correo de un adquiriente
+async function consultarDian(sb: any, userId: string, b: any) {
+  const { data: ut } = await sb.from('usuarios_tienda').select('tienda_id, tiendas(estado, fe_ambiente)').eq('user_id', userId).maybeSingle();
+  if (!ut) return responder({ error: 'Tu cuenta no tiene tienda asignada.' }, 403);
+  const pruebas = (ut.tiendas?.fe_ambiente || 'pruebas') !== 'produccion';
+  if (ut.tiendas?.estado !== 'activa') return responder({ error: 'La tienda está suspendida.' }, 403);
+  const tipo = String(b.tipo_documento || '13').replace(/\D/g, '') || '13';
+  const numero = String(b.documento || '').split('-')[0].replace(/\D/g, '');
+  if (numero.length < 3 || numero.length > 15) return responder({ error: 'Escribe un número de documento válido.' }, 400);
+  let base: string, cfg: any;
+  try { ({ base, cfg } = await configFactus(sb, ut.tienda_id)); }
+  catch (_) { return responder({ error: 'La consulta a la DIAN necesita la facturación electrónica configurada en tu tienda.' }, 400); }
+  const tk = await tokenFactus(ut.tienda_id, base, cfg);
+  const q = new URLSearchParams({ identification_document_code: tipo, identification_number: numero });
+  const r = await fetch(`${base}/v2/dian/acquirer?${q}`, { headers: { Authorization: `Bearer ${tk}`, Accept: 'application/json' } });
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 404) return responder({ encontrado: false, pruebas });
+  if (!r.ok) return responder({ error: 'La DIAN no respondió: ' + textoError(j) }, 400);
+  const d = (j?.data && typeof j.data === 'object' && !Array.isArray(j.data)) ? j.data : (j || {});
+  const primero = (...ks: string[]) => { for (const k of ks) { const v = d?.[k]; if (typeof v === 'string' && v.trim()) return v.trim(); } return ''; };
+  const nombre = primero('receiver_name', 'name', 'names', 'company', 'legal_name', 'business_name', 'full_name', 'razon_social', 'nombre');
+  const email = primero('receiver_email', 'email', 'email_address', 'correo');
+  if (!nombre && !email) return responder({ encontrado: false, pruebas });
+  return responder({ encontrado: true, pruebas, nombre, email: /^\S+@\S+\.\S+$/.test(email) ? email.toLowerCase() : '' });
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
@@ -215,6 +362,8 @@ Deno.serve(async (req) => {
 
     // Facturar: lo puede hacer cualquier usuario de la tienda dueña de la venta
     if (b.accion === 'facturar') return await facturar(sb, yo.id, b);
+    if (b.accion === 'dian_consultar') return await consultarDian(sb, yo.id, b);
+    if (b.accion === 'nota_credito') return await notaCredito(sb, yo.id, b);
 
     // Todo lo demás: solo el administrador
     const { data: adm } = await sb.from('administradores').select('user_id').eq('user_id', yo.id).maybeSingle();
@@ -223,7 +372,7 @@ Deno.serve(async (req) => {
     // ---------- FACTUS: ver / guardar / probar credenciales ----------
     if (b.accion === 'fe_ver') {
       const { data: c } = await sb.from('facturacion_config').select('*').eq('tienda_id', b.tienda_id).maybeSingle();
-      return responder({ client_id: c?.client_id || '', usuario: c?.usuario || '', numbering_range_id: c?.numbering_range_id || null,
+      return responder({ client_id: c?.client_id || '', usuario: c?.usuario || '', numbering_range_id: c?.numbering_range_id || null, nc_range_id: c?.nc_range_id || null,
         tiene_secreto: !!c?.client_secret, tiene_clave: !!c?.clave });
     }
     if (b.accion === 'fe_guardar') {
@@ -235,6 +384,7 @@ Deno.serve(async (req) => {
         client_secret: String(b.client_secret || '').trim() || c?.client_secret || null,
         clave: String(b.clave || '') || c?.clave || null,
         numbering_range_id: b.numbering_range_id ? Number(b.numbering_range_id) : null,
+        ...(b.nc_range_id !== undefined ? { nc_range_id: b.nc_range_id ? Number(b.nc_range_id) : null } : {}),
         actualizado_en: new Date().toISOString(),
       };
       const { error } = await sb.from('facturacion_config').upsert(fila);
