@@ -537,3 +537,18 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .vista-barra .vb-tab{margin-left:auto;padding:6px 12px;border-radius:999px;background:var(--brand-soft);color:var(--brand-strong);font-size:.85rem;font-weight:500;flex:none}
 .vista-ingreso{display:grid;justify-items:center;padding:18px;border:1px solid var(--line);border-radius:12px;background:var(--fondo);margin-top:8px}
 @media (max-width:640px){.logo-zona{flex-direction:column;align-items:flex-start}}
+
+/* ---------- Instalar la app, soporte y proveedor ---------- */
+.instalar-link{margin-top:14px;font-size:.88rem}
+.instalar-link[hidden]{display:none!important}
+.sb-pie .instalar-link{margin:0 0 4px;padding:6px 0;min-height:32px}
+.marca-grande .marca-logo{border:0;border-radius:16px;background:transparent}
+.aviso-soporte{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:12px;margin-top:20px;padding-top:16px;border-top:1px solid var(--line-2)}
+.aviso-soporte:empty{display:none}
+.proveedor{display:flex;align-items:center;gap:14px}
+.proveedor img,.proveedor .monograma{border-radius:12px}
+.proveedor > div > b{display:block;font-size:1.15rem;letter-spacing:-.01em}
+.proveedor > div > span{display:block;color:var(--muted);font-size:.9rem}
+.pasos-instalar{margin:14px 0 0;padding-left:20px;display:grid;gap:8px}
+.ingreso-pie .hecho-por{font-size:.92rem}
+.ingreso-pie .hecho-por img,.ingreso-pie .hecho-por .monograma{border-radius:6px}

@@ -10,8 +10,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="estilos.css?v=10">
-<link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="estilos.css?v=11">
+<link rel="manifest" href="admin.webmanifest">
+<link rel="icon" href="kodice-192.png">
+<link rel="apple-touch-icon" href="kodice-192.png">
+<meta name="application-name" content="Kodice Admin">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 </head>
 <body>
@@ -19,7 +22,7 @@
 
 <!-- ========== INGRESO ========== -->
 <section id="vLogin" class="ingreso hidden">
-  <div class="ingreso-marca"><div class="marca-logo marca-empresa" id="logoLogin"></div><span id="marcaLogin"></span></div>
+  <div class="ingreso-marca con-tienda marca-grande"><div class="marca-logo marca-empresa" id="logoLogin"></div><span id="marcaLogin"></span></div>
   <div class="ingreso-caja">
     <h1>Panel de administración</h1>
     <p class="muted" style="margin:6px 0 0">Entra con tu cuenta de administrador.</p>
@@ -31,6 +34,7 @@
     </form>
   </div>
   <div class="ingreso-pie">Acceso exclusivo para el administrador del software.</div>
+  <button class="link instalar-link" data-instalar hidden id="btnInstalarLogin">Instalar el panel en este equipo</button>
 </section>
 
 <!-- ========== PANEL ========== -->
@@ -38,7 +42,7 @@
   <aside class="sidebar" id="menu">
     <div class="marca"><div class="marca-logo marca-empresa" id="logoPanel"></div><div style="min-width:0"><b id="marcaPanel"></b><span class="sb-sub">Administración</span></div></div>
     <nav id="nav" aria-label="Secciones"></nav>
-    <div class="sb-pie"><div class="sb-version">Versión 7.1</div></div>
+    <div class="sb-pie"><button class="link instalar-link" data-instalar hidden id="btnInstalarPanel">Instalar en este equipo</button><div class="sb-version">Versión 7.2</div></div>
   </aside>
   <div class="principal">
     <header class="topbar">
@@ -151,6 +155,35 @@ const errorTexto = e => {
 
 const pila = [];
 // Lee un logo: los SVG se guardan tal cual; las fotos se reducen
+/* ---------- Instalar la app en este equipo ---------- */
+let pedidoInstalar = null;
+const appInstalada = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); pedidoInstalar = e; document.querySelectorAll('[data-instalar]').forEach(b => b.hidden = false); });
+window.addEventListener('appinstalled', () => {
+  pedidoInstalar = null;
+  document.querySelectorAll('[data-instalar]').forEach(b => b.hidden = true);
+  aviso('Listo: quedó instalada. Ábrela desde el escritorio o el menú Inicio.', 'ok');
+});
+async function instalarApp() {
+  if (pedidoInstalar) {
+    const p = pedidoInstalar; pedidoInstalar = null;
+    p.prompt();
+    const { outcome } = await p.userChoice.catch(() => ({}));
+    if (outcome !== 'accepted') pedidoInstalar = p;
+    return;
+  }
+  const movil = /Android|iPhone|iPad/i.test(navigator.userAgent), ios = /iPhone|iPad/i.test(navigator.userAgent), edge = /Edg\//.test(navigator.userAgent);
+  abrirModal(`<h2>Instalar en este equipo</h2>
+    <p class="muted">${appInstalada() ? 'Ya la estás usando instalada.' : 'Así queda con su propio ícono en el escritorio y se abre en su ventana, como un programa.'}</p>
+    ${appInstalada() ? '' : `<ol class="pasos-instalar">${ios ? '<li>Toca el botón <b>Compartir</b> de Safari.</li><li>Elige <b>Agregar a inicio</b> y toca <b>Agregar</b>.</li>'
+      : movil ? '<li>Abre el menú <b>⋮</b> de Chrome.</li><li>Toca <b>Instalar app</b> o <b>Agregar a la pantalla principal</b>.</li>'
+      : edge ? '<li>Abre el menú <b>⋯</b> de Edge (arriba a la derecha).</li><li>Entra a <b>Más herramientas</b>, luego <b>Aplicaciones</b> y <b>Instalar este sitio como aplicación</b>.</li><li>Toca <b>Instalar</b> y marca <b>Crear acceso directo en el escritorio</b>.</li>'
+      : '<li>Abre el menú <b>⋮</b> de Chrome (arriba a la derecha).</li><li>Entra a <b>Transmitir, guardar y compartir</b> y luego <b>Instalar página como app</b>.</li><li>Toca <b>Instalar</b>.</li>'}</ol>`}
+    <div class="modal-acciones"><button class="btn btn-primary" data-cerrar>Entendido</button></div>`);
+}
+$('btnInstalarLogin').onclick = () => instalarApp();
+$('btnInstalarPanel').onclick = () => instalarApp();
+
 function reducirImagen(file, max) {
   return new Promise((ok, mal) => {
     const img = new Image();
@@ -255,7 +288,7 @@ const logoMarca = (mk, tam) => mk.logo ? `<img src="${esc(mk.logo)}" alt="" widt
   : `<span class="monograma" style="width:${tam}px;height:${tam}px;font-size:${Math.round(tam * .55)}px">${esc((mk.marca || '?')[0].toUpperCase())}</span>`;
 function pintarMarca(p) {
   const mk = p && (p.marca || p.nombre) ? { marca: p.marca || p.nombre, logo: p.logo || null } : MARCA_DEFECTO;
-  $('logoLogin').innerHTML = logoMarca(mk, 38); $('logoPanel').innerHTML = logoMarca(mk, 38);
+  $('logoLogin').innerHTML = logoMarca(mk, 72); $('logoPanel').innerHTML = logoMarca(mk, 38);
   $('marcaLogin').textContent = mk.marca; $('marcaPanel').textContent = mk.marca;
   document.title = `Administración | ${mk.marca}`;
 }

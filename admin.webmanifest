@@ -1,0 +1,17 @@
+{
+  "id": "kodice-admin",
+  "name": "Kodice Administración",
+  "short_name": "Kodice Admin",
+  "description": "Panel de administración de los softwares de Kodice.",
+  "start_url": "./admin.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f4f1",
+  "theme_color": "#0f1b33",
+  "lang": "es-CO",
+  "icons": [
+    { "src": "kodice-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "kodice-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "kodice-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

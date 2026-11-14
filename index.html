@@ -9,10 +9,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="estilos.css?v=10">
+<link rel="stylesheet" href="estilos.css?v=11">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
+<meta name="application-name" content="Inventario Tienda">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
@@ -38,6 +39,7 @@
     </form>
   </div>
   <div class="ingreso-pie" id="pieLogin"></div>
+  <button class="link instalar-link" data-instalar hidden id="btnInstalarLogin">Instalar la app en este equipo</button>
 </section>
 
 <!-- ========== SIN TIENDA / SUSPENDIDA ========== -->
@@ -50,6 +52,7 @@
       <button class="btn" id="btnReintentar">Reintentar</button>
       <button class="btn btn-primary" id="btnSalirAviso">Cerrar sesión</button>
     </div>
+    <div class="aviso-soporte" id="avisoSoporte"></div>
   </div>
 </section>
 
@@ -75,7 +78,7 @@
    CONFIGURACIÓN
    ===================================================================== */
 const PRODUCTO = 'Inventario Tienda';       // nombre comercial de tu software
-const VERSION = '7.1';                     // versión que se muestra en el menú
+const VERSION = '7.2';                     // versión que se muestra en el menú
 const SUPABASE_URL = 'https://iibwvxuchcoeyzrmocju.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_fUlURD_H_Tzg5TY1LFp6Ew_nn1pfOMB';
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -390,7 +393,7 @@ function aplicarMarca() {
   $('nombreTienda').textContent = t?.nombre || PRODUCTO;
   document.title = (t?.nombre ? t.nombre + ' | ' : '') + PRODUCTO;
   const mk = marcaEmpresa();
-  $('pieLogin').innerHTML = `<span class="hecho-por">Un producto de ${logoEmpresa(mk, 20)}<b>${esc(mk.marca)}</b></span><span class="version">${PRODUCTO}, versión ${VERSION}</span>`;
+  $('pieLogin').innerHTML = `<span class="hecho-por">Un producto de ${logoEmpresa(mk, 26)}<b>${esc(mk.marca)}</b></span><span class="version">${PRODUCTO}, versión ${VERSION}</span>`;
 }
 
 // La marca de tu empresa se puede ver antes de entrar (solo nombre, logo y web)
@@ -449,12 +452,24 @@ db.auth.onAuthStateChange(async evento => {
 
 async function salir() { await db.auth.signOut(); location.reload(); }
 $('btnSalirAviso').onclick = salir;
+$('btnInstalarLogin').onclick = () => instalarApp();
 $('btnReintentar').onclick = () => iniciar();
 
 function avisoPantalla(titulo, texto) {
   $('avisoTitulo').textContent = titulo;
   $('avisoTexto').textContent = texto;
   mostrarPantalla('pantallaAviso');
+  pintarSoporteAviso();
+}
+// Quién da soporte: tu empresa de software, con su WhatsApp si lo tiene
+async function pintarSoporteAviso() {
+  const { data: p } = await db.from('plataforma').select('*').maybeSingle();
+  if (p) E.plataforma = p;
+  aplicarMarca();
+  const mk = marcaEmpresa();
+  $('avisoSoporte').innerHTML = `<span class="hecho-por">Un producto de ${logoEmpresa(mk, 24)}<b>${esc(mk.marca)}</b></span>
+    ${p?.telefono ? `<button class="btn btn-sm" id="avisoWa">${ico('whatsapp')}Escribir a soporte</button>` : ''}`;
+  $('avisoWa')?.addEventListener('click', () => abrirWhatsApp(p.telefono, `Hola ${mk.marca}, necesito ayuda con mi cuenta ${E.email || ''} de ${PRODUCTO}.`));
 }
 
 async function iniciar() {
@@ -585,6 +600,7 @@ function menuUsuario() {
       <span class="badge ${esDueno() ? 'dueno' : 'neutro'}" style="margin-top:8px">${esDueno() ? 'Dueño' : 'Cajero'} en ${esc(E.tienda.nombre)}</span></div>
     <button class="menu-item" data-a="tema">${ico(oscuro ? 'sol' : 'luna')}<span>${oscuro ? 'Usar modo claro' : 'Usar modo oscuro'}</span></button>
     <button class="menu-item" data-a="atajos">${ico('teclado')}<span>Atajos de teclado</span></button>
+    ${appInstalada() ? '' : `<button class="menu-item" data-a="instalar">${ico('descargar')}<span>Instalar en este equipo<small>Con su ícono en el escritorio</small></span></button>`}
     ${esDueno() ? `<button class="menu-item" data-a="tienda">${ico('config')}<span>Mi tienda</span></button>` : ''}
     <button class="menu-item" data-a="salir">${ico('salir')}<span>Cerrar sesión</span></button>
     <div class="menu-pie">Versión ${VERSION}, software de ${logoEmpresa(marcaEmpresa(), 16)}<b>${esc(marcaEmpresa().marca)}</b></div>`, { ancho: 290 });
@@ -593,6 +609,7 @@ function menuUsuario() {
     if (a === 'tema') alternarTema();
     if (a === 'atajos') modalAtajos();
     if (a === 'tienda') irA('config');
+    if (a === 'instalar') instalarApp();
     if (a === 'salir') salir();
   });
 }
@@ -2830,20 +2847,33 @@ function confPlan(cont) {
   const estadoPago = dias == null ? '' : dias < 0 ? '<span class="badge bajo">Vencido</span>' : dias <= 5 ? `<span class="badge aviso">En ${plural(dias, 'día', 'días')}</span>` : '<span class="badge ok">Al día</span>';
   const paquetes = [['Punto de venta', 'Vender, cobrar, tiquetes y productos', true], ...Object.entries(MODULOS).map(([k, x]) => [x.n, x.d, tieneModulo(k)]),
     ['Facturación electrónica', 'Facturas y notas crédito ante la DIAN' + (t.fe_activa && t.fe_ambiente !== 'produccion' ? '. Ahora en modo pruebas' : ''), !!t.fe_activa]];
+  const mk = marcaEmpresa(), pl = E.plataforma || {};
   cont.innerHTML = `<div class="dos-col">
-    <div class="panel" style="align-self:start"><h2>Tu plan</h2><p class="sub">${p.n}: ${p.d}</p>
+    <div class="apilado">
+    <div class="panel"><h2>Tu plan</h2><p class="sub">${p.n}: ${p.d}</p>
       <div class="tabla-wrap"><table><tbody>
         <tr><td>Valor mensual</td><td class="num"><b>${Number(t.valor_mensual) ? pesos(t.valor_mensual) : 'Por definir'}</b></td></tr>
         <tr><td>Próximo pago</td><td class="num">${t.proximo_pago ? fechaCorta(t.proximo_pago + 'T00:00:00') + ' ' + estadoPago : 'Por definir'}</td></tr>
         <tr><td>Estado del servicio</td><td class="num"><span class="badge ok">Activo</span></td></tr>
       </tbody></table></div>
-      <p class="small muted" style="margin:12px 0 0">Para cambiar de plan o renovar, comunícate con el administrador del software.</p>
+      <p class="small muted" style="margin:12px 0 0">Para cambiar de plan, renovar o agregar paquetes, escríbele a tu proveedor.</p>
     </div>
-    <div class="panel"><h2>Paquetes</h2><p class="sub">Lo que puedes usar en tu tienda</p>
+    <div class="panel"><h2>Tu proveedor de software</h2><p class="sub">Soporte, renovaciones y paquetes nuevos</p>
+      <div class="proveedor">${logoEmpresa(mk, 56)}<div><b>${esc(mk.marca)}</b><span>${esc(pl.nombre && pl.nombre !== mk.marca ? pl.nombre : 'Software empresarial')}</span></div></div>
+      ${pl.telefono || pl.correo || pl.web ? `<div class="tabla-wrap" style="margin-top:12px"><table><tbody>
+        ${pl.telefono ? `<tr><td>Teléfono</td><td class="num">${esc(pl.telefono)}</td></tr>` : ''}
+        ${pl.correo ? `<tr><td>Correo</td><td class="num">${esc(pl.correo)}</td></tr>` : ''}
+        ${pl.web ? `<tr><td>Página web</td><td class="num">${esc(pl.web)}</td></tr>` : ''}
+      </tbody></table></div>` : ''}
+      ${pl.telefono ? `<button class="btn" id="provWa" style="margin-top:12px">${ico('whatsapp')}Escribir por WhatsApp</button>` : ''}
+    </div>
+    </div>
+    <div class="panel" style="align-self:start"><h2>Paquetes</h2><p class="sub">Lo que puedes usar en tu tienda</p>
       <div class="paquetes">${paquetes.map(([n, d, on]) => `<div class="paquete"><div class="grow"><b>${n}</b><span>${d}</span></div><span class="badge ${on ? 'ok' : 'neutro'}">${on ? 'Incluido' : 'No incluido'}</span></div>`).join('')}</div>
-      ${paquetes.some(x => !x[2]) ? '<p class="small muted" style="margin:12px 0 0">Para agregar un paquete, comunícate con el administrador del software.</p>' : ''}
+      ${paquetes.some(x => !x[2]) ? `<p class="small muted" style="margin:12px 0 0">Para agregar un paquete, escríbele a ${esc(mk.marca)}.</p>` : ''}
     </div>
   </div>`;
+  $('provWa')?.addEventListener('click', () => abrirWhatsApp(pl.telefono, `Hola ${mk.marca}, te escribo de ${t.nombre}.`));
 }
 
 function confCopia(cont) {
@@ -2973,6 +3003,33 @@ function soltarArchivo(zona, alSoltar) {
   zona.addEventListener('dragover', e => { e.preventDefault(); zona.classList.add('arrastrando'); });
   zona.addEventListener('dragleave', () => zona.classList.remove('arrastrando'));
   zona.addEventListener('drop', e => { e.preventDefault(); zona.classList.remove('arrastrando'); const f = e.dataTransfer.files[0]; if (f) alSoltar(f); });
+}
+
+/* ---------- Instalar la app en este equipo ---------- */
+let pedidoInstalar = null;
+const appInstalada = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); pedidoInstalar = e; document.querySelectorAll('[data-instalar]').forEach(b => b.hidden = false); });
+window.addEventListener('appinstalled', () => {
+  pedidoInstalar = null;
+  document.querySelectorAll('[data-instalar]').forEach(b => b.hidden = true);
+  aviso('Listo: quedó instalada. Ábrela desde el escritorio o el menú Inicio.', 'ok');
+});
+async function instalarApp() {
+  if (pedidoInstalar) {
+    const p = pedidoInstalar; pedidoInstalar = null;
+    p.prompt();
+    const { outcome } = await p.userChoice.catch(() => ({}));
+    if (outcome !== 'accepted') pedidoInstalar = p;
+    return;
+  }
+  const movil = /Android|iPhone|iPad/i.test(navigator.userAgent), ios = /iPhone|iPad/i.test(navigator.userAgent), edge = /Edg\//.test(navigator.userAgent);
+  abrirModal(`<h2>Instalar en este equipo</h2>
+    <p class="muted">${appInstalada() ? 'Ya la estás usando instalada.' : 'Así queda con su propio ícono en el escritorio y se abre en su ventana, como un programa.'}</p>
+    ${appInstalada() ? '' : `<ol class="pasos-instalar">${ios ? '<li>Toca el botón <b>Compartir</b> de Safari.</li><li>Elige <b>Agregar a inicio</b> y toca <b>Agregar</b>.</li>'
+      : movil ? '<li>Abre el menú <b>⋮</b> de Chrome.</li><li>Toca <b>Instalar app</b> o <b>Agregar a la pantalla principal</b>.</li>'
+      : edge ? '<li>Abre el menú <b>⋯</b> de Edge (arriba a la derecha).</li><li>Entra a <b>Más herramientas</b>, luego <b>Aplicaciones</b> y <b>Instalar este sitio como aplicación</b>.</li><li>Toca <b>Instalar</b> y marca <b>Crear acceso directo en el escritorio</b>.</li>'
+      : '<li>Abre el menú <b>⋮</b> de Chrome (arriba a la derecha).</li><li>Entra a <b>Transmitir, guardar y compartir</b> y luego <b>Instalar página como app</b>.</li><li>Toca <b>Instalar</b>.</li>'}</ol>`}
+    <div class="modal-acciones"><button class="btn btn-primary" data-cerrar>Entendido</button></div>`);
 }
 
 function reducirImagen(file, max) {
