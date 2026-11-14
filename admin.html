@@ -58,7 +58,8 @@
 const PRODUCTO = 'Inventario Tienda';
 const SUPABASE_URL = 'https://iibwvxuchcoeyzrmocju.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_fUlURD_H_Tzg5TY1LFp6Ew_nn1pfOMB';
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// Sesión propia del panel: entrar a la cuenta de una tienda en la app no cierra la del administrador
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { storageKey: 'inventario-admin-sesion' } });
 const URL_APP = location.href.split('#')[0].split('?')[0].replace(/admin\.html$/, '');
 
 /* =====================================================================
