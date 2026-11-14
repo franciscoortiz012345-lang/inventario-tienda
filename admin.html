@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="estilos.css?v=9">
+<link rel="stylesheet" href="estilos.css?v=10">
 <link rel="icon" href="icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 </head>
@@ -19,9 +19,9 @@
 
 <!-- ========== INGRESO ========== -->
 <section id="vLogin" class="ingreso hidden">
-  <div class="ingreso-marca"><div class="marca-logo" id="logoLogin"></div><span>Panel de administración</span></div>
+  <div class="ingreso-marca"><div class="marca-logo marca-empresa" id="logoLogin"></div><span id="marcaLogin"></span></div>
   <div class="ingreso-caja">
-    <h1>Iniciar sesión</h1>
+    <h1>Panel de administración</h1>
     <p class="muted" style="margin:6px 0 0">Entra con tu cuenta de administrador.</p>
     <form id="fLogin">
       <label for="lEmail">Correo</label><input type="email" id="lEmail" required autocomplete="email">
@@ -36,9 +36,9 @@
 <!-- ========== PANEL ========== -->
 <div id="vPanel" class="app hidden">
   <aside class="sidebar" id="menu">
-    <div class="marca"><div class="marca-logo" id="logoPanel"></div><div style="min-width:0"><b>Administración</b><span class="sb-sub">Plataforma de softwares</span></div></div>
+    <div class="marca"><div class="marca-logo marca-empresa" id="logoPanel"></div><div style="min-width:0"><b id="marcaPanel"></b><span class="sb-sub">Administración</span></div></div>
     <nav id="nav" aria-label="Secciones"></nav>
-    <div class="sb-pie"><div class="sb-version">Versión 7.0</div></div>
+    <div class="sb-pie"><div class="sb-version">Versión 7.1</div></div>
   </aside>
   <div class="principal">
     <header class="topbar">
@@ -60,6 +60,8 @@ const SUPABASE_URL = 'https://iibwvxuchcoeyzrmocju.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_fUlURD_H_Tzg5TY1LFp6Ew_nn1pfOMB';
 // Sesión propia del panel: entrar a la cuenta de una tienda en la app no cierra la del administrador
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { storageKey: 'inventario-admin-sesion' } });
+// Tu empresa de software. El nombre y el logo se cambian en Mi empresa
+const MARCA_DEFECTO = { marca: 'Kodice', logo: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTUiIGZpbGw9IiMwZjFiMzMiLz48cmVjdCB4PSIxNSIgeT0iMTQiIHdpZHRoPSI3IiBoZWlnaHQ9IjM2IiByeD0iMS41IiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTQzIDE0LjUgMjcuNSAzMiA0MyA0OS41IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iNyIvPjxyZWN0IHg9IjQ1IiB5PSI0NC41IiB3aWR0aD0iOSIgaGVpZ2h0PSI1LjUiIHJ4PSIxLjIiIGZpbGw9IiMyMmMzZTYiLz48L3N2Zz4K' };
 const URL_APP = location.href.split('#')[0].split('?')[0].replace(/admin\.html$/, '');
 
 /* =====================================================================
@@ -122,6 +124,7 @@ const ICONOS = {
   reloj: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   enlace: '<path d="M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7l1.7-1.7"/>',
   reiniciar: '<path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+  subir: '<path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 20h16"/>',
 };
 const ico = n => `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONOS[n] || ''}</svg>`;
 const vacioBloque = (i, t) => `<div class="vacio-bloque">${ico(i)}<div>${t}</div></div>`;
@@ -147,6 +150,41 @@ const errorTexto = e => {
 };
 
 const pila = [];
+// Lee un logo: los SVG se guardan tal cual; las fotos se reducen
+function reducirImagen(file, max) {
+  return new Promise((ok, mal) => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.width, img.height));
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      ok(cv.toDataURL('image/png'));
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = () => mal(new Error('No se pudo leer la imagen.'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+async function leerLogo(f, max = 256) {
+  if (!/^image\//.test(f.type)) throw new Error('El archivo no es una imagen.');
+  if (f.type === 'image/svg+xml') {
+    if (f.size > 200000) throw new Error('El SVG pesa demasiado (máximo 200 KB).');
+    return new Promise((ok, mal) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = mal; r.readAsDataURL(f); });
+  }
+  return reducirImagen(f, max);
+}
+function elegirArchivo(tipos, alElegir) {
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = tipos;
+  inp.onchange = () => inp.files[0] && alElegir(inp.files[0]);
+  inp.click();
+}
+function soltarArchivo(zona, alSoltar) {
+  zona.addEventListener('dragover', e => { e.preventDefault(); zona.classList.add('arrastrando'); });
+  zona.addEventListener('dragleave', () => zona.classList.remove('arrastrando'));
+  zona.addEventListener('drop', e => { e.preventDefault(); zona.classList.remove('arrastrando'); const f = e.dataTransfer.files[0]; if (f) alSoltar(f); });
+}
+
 function abrirModal(html, alCerrar, ancho = false) {
   const fondo = document.createElement('div');
   fondo.className = 'modal-fondo';
@@ -212,7 +250,21 @@ const VISTAS = {
   empresa: { t: 'Mi empresa', g: 'Plataforma', f: () => verMiEmpresa() },
   usuarios: { t: 'Usuarios', g: 'Accesos', f: () => verUsuarios() },
 };
-$('logoLogin').innerHTML = ico('escudo'); $('logoPanel').innerHTML = ico('escudo');
+// Marca de tu empresa en el ingreso y en el menú lateral
+const logoMarca = (mk, tam) => mk.logo ? `<img src="${esc(mk.logo)}" alt="" width="${tam}" height="${tam}">`
+  : `<span class="monograma" style="width:${tam}px;height:${tam}px;font-size:${Math.round(tam * .55)}px">${esc((mk.marca || '?')[0].toUpperCase())}</span>`;
+function pintarMarca(p) {
+  const mk = p && (p.marca || p.nombre) ? { marca: p.marca || p.nombre, logo: p.logo || null } : MARCA_DEFECTO;
+  $('logoLogin').innerHTML = logoMarca(mk, 38); $('logoPanel').innerHTML = logoMarca(mk, 38);
+  $('marcaLogin').textContent = mk.marca; $('marcaPanel').textContent = mk.marca;
+  document.title = `Administración | ${mk.marca}`;
+}
+try { pintarMarca(JSON.parse(localStorage.getItem('marcaEmpresa') || 'null')); } catch (e) { pintarMarca(null); }
+db.rpc('marca_plataforma').then(({ data, error }) => {
+  if (error || !data?.marca) return;
+  try { localStorage.setItem('marcaEmpresa', JSON.stringify(data)); } catch (e) {}
+  pintarMarca(data);
+});
 $('btnMenu').innerHTML = ico('menu');
 $('btnMenu').onclick = () => { $('menu').classList.add('abierto'); $('velo').classList.remove('hidden'); };
 $('velo').onclick = cerrarMenu;
@@ -484,6 +536,8 @@ async function verTienda(id) {
       `<button class="btn ${activa ? 'btn-danger' : 'btn-primary'}" id="bEstado">${activa ? 'Suspender empresa' : 'Reactivar empresa'}</button>`)}
     <div class="dos-col">
       <div class="panel"><h2>Datos de la empresa</h2><p class="sub">Es quien emite las facturas: estos datos salen en el tiquete y en la factura electrónica. Solo tú puedes cambiarlos.</p>
+        <label>Logo de la empresa</label>
+        <div class="logo-zona" id="tLogoZona" style="margin-bottom:6px"></div>
         ${camposFiscales(t)}
         <p class="small muted" style="margin:10px 0 0">Deben coincidir con el RUT y con los datos de la empresa registrados en Factus.</p>
         <div class="modal-acciones" style="margin-top:12px"><button class="btn btn-primary" id="bGuardar">Guardar datos</button></div>
@@ -543,6 +597,25 @@ async function verTienda(id) {
     </div>`;
   const el = s => $('contenido').querySelector(s);
   $('bVolver').onclick = () => ir('tiendas');
+  // Logo de la empresa cliente: se guarda de una vez
+  const pintarLogoTienda = () => {
+    $('tLogoZona').innerHTML = `<div class="logo-cuadro">${t.logo ? `<img src="${esc(t.logo)}" alt="Logo de ${esc(t.nombre)}">` : ico('tiendas')}</div>
+      <div class="grow"><b>${t.logo ? 'Logo cargado' : 'Sin logo'}</b>
+        <p class="small muted" style="margin:4px 0 10px">Sale en su app, en su pantalla de ingreso y en sus tiquetes. La empresa también puede cambiarlo en Mi tienda.</p>
+        <div class="row"><button class="btn btn-sm" id="tSubirLogo">${ico('subir')}${t.logo ? 'Cambiar logo' : 'Subir logo'}</button>${t.logo ? '<button class="link danger" id="tQuitarLogo">Quitar</button>' : ''}</div></div>`;
+    $('tSubirLogo').onclick = () => elegirArchivo('image/*', guardarLogoTienda);
+    $('tQuitarLogo')?.addEventListener('click', () => guardarLogoTienda(null));
+  };
+  const guardarLogoTienda = async f => {
+    let logo = null;
+    if (f) { try { logo = await leerLogo(f, 256); } catch (e) { return aviso(e.message || 'No se pudo leer la imagen.', 'error'); } }
+    const { error } = await db.from('tiendas').update({ logo }).eq('id', id);
+    if (error) return aviso(errorTexto(error), 'error');
+    t.logo = logo; pintarLogoTienda();
+    aviso(logo ? 'Logo guardado' : 'Logo quitado', 'ok');
+  };
+  soltarArchivo($('tLogoZona'), guardarLogoTienda);
+  pintarLogoTienda();
   $('bGuardar').onclick = async () => {
     const datos = leerFiscales(el);
     if (!datos.nombre) return aviso('El nombre comercial es obligatorio.', 'error');
@@ -811,9 +884,15 @@ async function verMiEmpresa() {
   const v = p || {};
   $('cuerpo').className = '';
   $('cuerpo').innerHTML = `<div class="col-ancha">
-    <div class="panel"><h2>Datos de tu empresa</h2><p class="sub">Solo tú los ves y los cambias</p>
+    <div class="apilado">
+    <div class="panel"><h2>Marca</h2><p class="sub">El nombre y el logo que ven tus clientes en la pantalla de ingreso, en el menú y en este panel</p>
+      <label for="mMarca">Nombre comercial</label><input id="mMarca" value="${esc(v.marca || '')}" placeholder="Ej: Kodice">
+      <label>Logo</label>
+      <div class="logo-zona" id="mLogoZona"></div>
+    </div>
+    <div class="panel"><h2>Datos legales</h2><p class="sub">Solo tú los ves y los cambias. Salen como proveedor en los tiquetes</p>
       <div class="grid2">
-        <div><label for="mNombre">Nombre o razón social</label><input id="mNombre" value="${esc(v.nombre || '')}" placeholder="Ej: Soluciones Empresariales SAS"></div>
+        <div><label for="mNombre">Razón social</label><input id="mNombre" value="${esc(v.nombre || '')}" placeholder="Ej: Kodice SAS"></div>
         <div class="grid2" style="gap:0 10px;grid-template-columns:minmax(0,1fr) 80px"><div><label for="mNit">NIT</label><input id="mNit" value="${esc(v.nit || '')}"></div><div><label for="mDv">DV</label><input id="mDv" value="${esc(v.dv || '')}" maxlength="1"></div></div>
         <div><label for="mDir">Dirección</label><input id="mDir" value="${esc(v.direccion || '')}"></div>
         <div><label for="mTel">Teléfono de soporte</label><input id="mTel" value="${esc(v.telefono || '')}"></div>
@@ -823,20 +902,43 @@ async function verMiEmpresa() {
       <label class="interruptor" style="margin-top:16px"><input type="checkbox" id="mTiq" ${v.mostrar_en_tiquete !== false ? 'checked' : ''}><span></span>Mostrar en los tiquetes y facturas impresas de tus clientes</label>
       <div class="modal-acciones"><button class="btn btn-primary" id="mGuardar">Guardar datos</button></div>
     </div>
-    <div class="panel" style="align-self:start"><h2>Así sale en el tiquete</h2><p class="sub">Una línea al final de cada tiquete impreso</p>
-      <div class="recibo-prev" id="mPrev"></div>
-      <p class="small muted" style="margin:12px 0 0">Además, en la app de tus clientes, el menú muestra "Software de" con el nombre de tu empresa.</p></div>
+    </div>
+    <div class="panel" style="align-self:start;position:sticky;top:84px"><h2>Así se ve</h2><p class="sub">En la pantalla de ingreso de tus clientes</p>
+      <div class="vista-ingreso" id="mVistaIngreso"></div>
+      <p class="sub" style="margin:16px 0 0">Al final de cada tiquete impreso</p>
+      <div class="recibo-prev" id="mPrev" style="margin-top:8px"></div></div>
   </div>`;
+  let logo = v.logo || null;
   const prev = () => {
-    const n = $('mNombre').value.trim(), nit = $('mNit').value.trim(), dv = $('mDv').value.trim(), web = $('mWeb').value.trim();
-    $('mPrev').innerHTML = `<div class="rd-c">¡Gracias por su compra!</div><hr>${$('mTiq').checked && n ? `<div class="rd-c">Software: ${esc(n)}${nit ? ' NIT ' + esc(nit + (dv ? '-' + dv : '')) : ''}${web ? '<br>' + esc(web) : ''}</div>` : '<div class="rd-c">(No se muestra)</div>'}`;
+    const marca = $('mMarca').value.trim(), n = $('mNombre').value.trim(), nit = $('mNit').value.trim(), dv = $('mDv').value.trim(), web = $('mWeb').value.trim();
+    const mk = { marca: marca || n || MARCA_DEFECTO.marca, logo: marca || n ? logo : MARCA_DEFECTO.logo };
+    $('mVistaIngreso').innerHTML = `<span class="hecho-por">Un producto de ${logoMarca(mk, 20)}<b>${esc(mk.marca)}</b></span>`;
+    $('mPrev').innerHTML = `<div class="rd-c">¡Gracias por su compra!</div><hr>${$('mTiq').checked && (marca || n) ? `<div class="rd-c">Software: ${esc(marca || n)}${marca && n && n !== marca ? '<br>' + esc(n) : ''}${nit ? ' NIT ' + esc(nit + (dv ? '-' + dv : '')) : ''}${web ? '<br>' + esc(web) : ''}</div>` : '<div class="rd-c">(No se muestra)</div>'}`;
   };
-  ['mNombre', 'mNit', 'mDv', 'mWeb'].forEach(i => $(i).oninput = prev); $('mTiq').onchange = prev; prev();
+  const pintarLogo = () => {
+    $('mLogoZona').innerHTML = `<div class="logo-cuadro">${logo ? `<img src="${esc(logo)}" alt="Logo">` : ico('escudo')}</div>
+      <div class="grow"><b>${logo ? 'Logo de tu empresa' : 'Sin logo'}</b>
+        <p class="small muted" style="margin:4px 0 10px">${logo ? 'Se guarda al tocar "Guardar datos".' : 'Sin logo se muestra la inicial del nombre.'} PNG, JPG o SVG, mejor cuadrado. También puedes arrastrarlo aquí.</p>
+        <div class="row"><button class="btn btn-sm" id="mSubir">${ico('subir')}${logo ? 'Cambiar logo' : 'Subir logo'}</button>${logo ? '<button class="link danger" id="mQuitar">Quitar</button>' : ''}${logo !== MARCA_DEFECTO.logo ? '<button class="link" id="mDefecto">Usar el logo de Kodice</button>' : ''}</div></div>`;
+    $('mSubir').onclick = () => elegirArchivo('image/*', usarLogo);
+    $('mQuitar')?.addEventListener('click', () => { logo = null; pintarLogo(); prev(); });
+    $('mDefecto')?.addEventListener('click', () => { logo = MARCA_DEFECTO.logo; pintarLogo(); prev(); });
+  };
+  const usarLogo = async f => {
+    try { logo = await leerLogo(f, 512); } catch (e) { return aviso(e.message || 'No se pudo leer la imagen.', 'error'); }
+    pintarLogo(); prev();
+  };
+  soltarArchivo($('mLogoZona'), usarLogo);
+  pintarLogo();
+  ['mMarca', 'mNombre', 'mNit', 'mDv', 'mWeb'].forEach(i => $(i).oninput = prev); $('mTiq').onchange = prev; prev();
   $('mGuardar').onclick = async () => {
-    const d = { nombre: $('mNombre').value.trim() || null, nit: $('mNit').value.replace(/[^\d]/g, '') || null, dv: $('mDv').value.trim() || null, direccion: $('mDir').value.trim() || null,
+    const d = { marca: $('mMarca').value.trim() || null, logo, nombre: $('mNombre').value.trim() || null, nit: $('mNit').value.replace(/[^\d]/g, '') || null, dv: $('mDv').value.trim() || null, direccion: $('mDir').value.trim() || null,
       telefono: $('mTel').value.trim() || null, correo: $('mCorreo').value.trim() || null, web: $('mWeb').value.trim() || null, mostrar_en_tiquete: $('mTiq').checked, actualizado_en: new Date().toISOString() };
     const { error } = await db.from('plataforma').update(d).eq('id', 1);
-    if (error) return aviso(errorTexto(error), 'error');
+    if (error) return aviso(/marca|logo/.test(error.message) && /column|schema cache/i.test(error.message) ? 'Falta ejecutar la migración V10 en Supabase (migracion_v10.sql).' : errorTexto(error), 'error');
+    const pub = { marca: d.marca || d.nombre, logo: d.logo, web: d.web };
+    try { localStorage.setItem('marcaEmpresa', JSON.stringify(pub)); } catch (e) {}
+    pintarMarca(pub);
     aviso('Datos de tu empresa guardados', 'ok');
   };
 }

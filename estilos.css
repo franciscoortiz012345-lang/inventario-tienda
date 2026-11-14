@@ -510,3 +510,30 @@ tr.clic:hover{background:var(--card-2)}
 input[type=number]{-moz-appearance:textfield;appearance:textfield}
 input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 @media (max-width:640px){.sin-movil{display:none}td.acciones{white-space:normal}td.acciones .link{display:block;margin:0 0 0 auto;padding:6px 0}}
+
+/* ---------- Marca de la empresa de software y logo de cada empresa ---------- */
+.ingreso-marca.con-tienda{flex-direction:column;gap:12px;font-size:1.35rem;font-weight:700;text-align:center;letter-spacing:-.01em}
+.ingreso-marca.con-tienda .marca-logo{width:72px;height:72px;border-radius:18px;border:1px solid var(--line)}
+.ingreso-marca.con-tienda .marca-logo svg{width:32px;height:32px}
+.ingreso-pie{display:grid;justify-items:center;gap:6px}
+.ingreso-pie .version{font-size:.78rem}
+.hecho-por{display:inline-flex;align-items:center;gap:7px;color:var(--muted);font-size:.85rem}
+.hecho-por b{color:var(--text);font-weight:650}
+.hecho-por img,.menu-pie img{border-radius:5px;flex:none;display:block}
+.monograma{display:inline-grid;place-items:center;flex:none;background:#0f1b33;color:#fff;font-weight:700;line-height:1;border-radius:5px}
+.marca-logo .monograma{width:100%!important;height:100%!important;border-radius:0}
+.menu-pie{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 12px 4px;border-top:1px solid var(--line-2);margin-top:4px;font-size:.8rem;color:var(--muted)}
+.menu-pie b{color:var(--text);font-weight:600}
+.marca-empresa,.marca-empresa img{background:transparent}
+.logo-zona{display:flex;align-items:center;gap:18px;padding:16px;border:1.5px dashed var(--line);border-radius:14px;background:var(--card-2)}
+.logo-zona.arrastrando{border-color:var(--brand);background:var(--brand-soft)}
+.logo-zona b{display:block}
+.logo-cuadro{width:96px;height:96px;border-radius:16px;border:1px solid var(--line);background:#fff;display:grid;place-items:center;overflow:hidden;color:#8a938f;flex:none}
+.logo-cuadro img{width:100%;height:100%;object-fit:contain;padding:8px}
+.logo-cuadro svg{width:34px;height:34px}
+.vista-barra{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);margin-top:8px;min-width:0}
+.vista-barra .marca-logo{width:34px;height:34px;border-radius:9px}
+.vista-barra b{font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vista-barra .vb-tab{margin-left:auto;padding:6px 12px;border-radius:999px;background:var(--brand-soft);color:var(--brand-strong);font-size:.85rem;font-weight:500;flex:none}
+.vista-ingreso{display:grid;justify-items:center;padding:18px;border:1px solid var(--line);border-radius:12px;background:var(--fondo);margin-top:8px}
+@media (max-width:640px){.logo-zona{flex-direction:column;align-items:flex-start}}
