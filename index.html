@@ -78,7 +78,7 @@
    CONFIGURACIÓN
    ===================================================================== */
 const PRODUCTO = 'Inventario Tienda';       // nombre comercial de tu software
-const VERSION = '7.2';                     // versión que se muestra en el menú
+const VERSION = '7.3';                     // versión que se muestra en el menú
 const SUPABASE_URL = 'https://iibwvxuchcoeyzrmocju.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_fUlURD_H_Tzg5TY1LFp6Ew_nn1pfOMB';
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -386,9 +386,12 @@ function aplicarMarca() {
   document.querySelectorAll('.nombreProducto').forEach(e => e.textContent = PRODUCTO);
   if (t) guardarLocal('tiendaRecordada', JSON.stringify({ nombre: t.nombre, logo: t.logo || null, color: t.color || null }));
   $('logoTienda').innerHTML = logoDe(t);
-  $('logoLogin').innerHTML = logoDe(recordada);
+  // Al entrar: el logo de la tienda si lo tiene; si no, el de tu empresa de software
+  const mkIngreso = marcaEmpresa();
+  $('logoLogin').innerHTML = recordada?.logo ? logoDe(recordada) : logoEmpresa(mkIngreso, 72);
   $('nombreIngreso').textContent = recordada?.nombre || PRODUCTO;
-  $('marcaIngreso').classList.toggle('con-tienda', !!recordada);
+  $('marcaIngreso').classList.add('con-tienda');
+  $('marcaIngreso').classList.toggle('marca-grande', !recordada?.logo);
   $('logoAviso').innerHTML = logoDe(m);
   $('nombreTienda').textContent = t?.nombre || PRODUCTO;
   document.title = (t?.nombre ? t.nombre + ' | ' : '') + PRODUCTO;
