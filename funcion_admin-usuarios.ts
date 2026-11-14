@@ -74,6 +74,39 @@ async function tokenFactus(tiendaId: number, base: string, cfg: any): Promise<st
   return j.access_token;
 }
 
+// Datos del adquiriente para Factus: el cliente guardado o consumidor final
+function armarCliente(cli: any, municipioTienda: unknown) {
+  if (cli?.documento) {
+    const juridica = cli.tipo_persona === '1';
+    const docLimpio = String(cli.documento).split('-')[0].replace(/\D/g, '');
+    return {
+      identification_document_code: cli.tipo_documento || '13',
+      identification: docLimpio,
+      legal_organization_code: juridica ? '1' : '2',
+      tribute_code: cli.tributo || 'ZZ',
+      responsibilities: [cli.responsabilidad || 'R-99-PN'],
+      country_code: 'CO',
+      ...(cli.dv ? { dv: String(cli.dv) } : {}),
+      ...(juridica ? { company: cli.nombre } : { names: cli.nombre }),
+      ...(cli.nombre_comercial ? { trade_name: cli.nombre_comercial } : {}),
+      ...(cli.direccion ? { address: cli.direccion } : {}),
+      ...(cli.email ? { email: cli.email } : {}),
+      ...(cli.telefono ? { phone: cli.telefono } : {}),
+      municipality_code: codMun(cli.municipio) || codMun(municipioTienda) || '11001',
+    } as any;
+  }
+  return { identification_document_code: '13', identification: '222222222222', legal_organization_code: '2', names: 'Consumidor final', tribute_code: 'ZZ', responsibilities: ['R-99-PN'], country_code: 'CO', municipality_code: codMun(municipioTienda) || '11001' } as any;
+}
+
+// Rango de numeración de notas crédito: el elegido en el panel o el activo de Factus
+async function rangoNotaCredito(base: string, tk: string, cfg: any): Promise<number | null> {
+  if (cfg.nc_range_id) return Number(cfg.nc_range_id);
+  const r = await fetch(`${base}/v2/numbering-ranges`, { headers: { Authorization: `Bearer ${tk}`, Accept: 'application/json' } });
+  const j = await r.json().catch(() => ({}));
+  const lista = buscarLista(j).filter((x: any) => (x.is_active ?? true) && /cr[eé]dit/i.test(String(x.document?.name ?? x.document ?? '') + ' ' + String(x.document?.code ?? '')));
+  return lista[0]?.id ? Number(lista[0].id) : null;
+}
+
 async function facturar(sb: any, userId: string, b: any) {
   const { data: ut } = await sb.from('usuarios_tienda').select('tienda_id, tiendas(estado, fe_activa, municipio)').eq('user_id', userId).maybeSingle();
   const { data: v } = await sb.from('ventas').select('*').eq('id', b.venta_id).maybeSingle();
@@ -135,30 +168,7 @@ async function facturar(sb: any, userId: string, b: any) {
     if (Math.abs(redondeo) > 500) return await fallar(`La diferencia de redondeo (${redondeo}) supera lo permitido. Revisa precios e IVA de los productos.`);
 
     // Cliente
-    let customer: any;
-    if (cli?.documento) {
-      const juridica = cli.tipo_persona === '1';
-      const docLimpio = String(cli.documento).split('-')[0].replace(/\D/g, '');
-      customer = {
-        identification_document_code: cli.tipo_documento || '13',
-        identification: docLimpio,
-        legal_organization_code: juridica ? '1' : '2',
-        tribute_code: cli.tributo || 'ZZ',
-        responsibilities: [cli.responsabilidad || 'R-99-PN'],
-        country_code: 'CO',
-        ...(cli.dv ? { dv: String(cli.dv) } : {}),
-        ...(juridica ? { company: cli.nombre } : { names: cli.nombre }),
-        ...(cli.nombre_comercial ? { trade_name: cli.nombre_comercial } : {}),
-        ...(cli.direccion ? { address: cli.direccion } : {}),
-        ...(cli.email ? { email: cli.email } : {}),
-        ...(cli.telefono ? { phone: cli.telefono } : {}),
-      };
-      // Código DANE del municipio (5 dígitos): el del cliente o, si no tiene, el de la tienda
-      customer.municipality_code = codMun(cli.municipio) || codMun(ut.tiendas?.municipio) || '11001';
-    } else {
-      const munTienda = codMun(ut.tiendas?.municipio);
-      customer = { identification_document_code: '13', identification: '222222222222', legal_organization_code: '2', names: 'Consumidor final', tribute_code: 'ZZ', responsibilities: ['R-99-PN'], country_code: 'CO', municipality_code: munTienda || '11001' };
-    }
+    const customer = armarCliente(cli, ut.tiendas?.municipio);
 
     // Pago
     const credito = v.medio_pago === 'fiado';
@@ -173,7 +183,7 @@ async function facturar(sb: any, userId: string, b: any) {
         }];
 
     const cuerpo: any = {
-      reference_code: `T${v.tienda_id}-V${v.numero}-${intento}`,
+      reference_code: `T${v.tienda_id}-ID${v.id}-${intento}`, // el id nunca se repite, ni después de reiniciar los datos
       document: '01',
       operation_type: '10',
       send_email: !!customer.email,
@@ -214,7 +224,7 @@ async function facturar(sb: any, userId: string, b: any) {
 // =====================================================================
 const CONCEPTOS_NC: Record<string, string> = { '1': 'Devolución de productos', '2': 'Anulación de la factura' };
 async function notaCredito(sb: any, userId: string, b: any) {
-  const { data: ut } = await sb.from('usuarios_tienda').select('tienda_id, rol, tiendas(estado, fe_activa)').eq('user_id', userId).maybeSingle();
+  const { data: ut } = await sb.from('usuarios_tienda').select('tienda_id, rol, tiendas(estado, fe_activa, municipio)').eq('user_id', userId).maybeSingle();
   if (!ut) return responder({ error: 'Tu cuenta no tiene tienda asignada.' }, 403);
   if (ut.rol !== 'dueno') return responder({ error: 'Solo el dueño puede hacer notas crédito.' }, 403);
   if (ut.tiendas?.estado !== 'activa') return responder({ error: 'La tienda está suspendida.' }, 403);
@@ -285,6 +295,8 @@ async function notaCredito(sb: any, userId: string, b: any) {
   try {
     const { base, cfg } = await configFactus(sb, v.tienda_id);
     const tk = await tokenFactus(v.tienda_id, base, cfg);
+    let cli: any = null;
+    if (v.cliente_id) ({ data: cli } = await sb.from('clientes').select('*').eq('id', v.cliente_id).maybeSingle());
     const medio = v.medio_pago === 'mixto' && Array.isArray(v.pagos) && v.pagos[0] ? v.pagos[0].medio : v.medio_pago;
     const cuerpo: any = {
       reference_code: `T${v.tienda_id}-V${v.numero}-NC${nc.id}`,
@@ -293,11 +305,14 @@ async function notaCredito(sb: any, userId: string, b: any) {
       bill_number: v.fe_numero,
       observation: `${CONCEPTOS_NC[concepto]} · venta #${v.numero}${motivo ? ' · ' + motivo : ''}`.slice(0, 500),
       payment_details: [{ payment_form: '1', payment_method_code: METODO_PAGO[medio] || '10', amount: f2(total) }],
+      customer: armarCliente(cli, ut.tiendas?.municipio),
       items,
     };
     const redondeo = r2(total - calculado);
     if (redondeo !== 0) cuerpo.cash_rounding_amount = f2(redondeo);
-    if (cfg.nc_range_id) cuerpo.numbering_range_id = Number(cfg.nc_range_id);
+    const rango = await rangoNotaCredito(base, tk, cfg);
+    if (!rango) return await fallar('No hay un rango de numeración de notas crédito activo en Factus. Créalo en Factus y elígelo en el panel de administración (Facturación electrónica, Rango de notas crédito).');
+    cuerpo.numbering_range_id = rango;
     const r = await fetch(`${base}/v2/credit-notes/validate`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${tk}`, Accept: 'application/json', 'Content-Type': 'application/json' },

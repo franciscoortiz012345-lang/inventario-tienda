@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Inventario Tienda</title>
-<meta name="theme-color" content="#14233c">
+<meta name="theme-color" content="#f3f4f1">
 <script>try{var t=localStorage.getItem('tema');document.documentElement.dataset.theme=t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="estilos.css?v=6">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilos.css?v=9">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -22,47 +22,22 @@
 <div id="toasts" aria-live="polite"></div>
 
 <!-- ========== INGRESO ========== -->
-<section id="pantallaLogin" class="login hidden">
-  <div class="login-marca">
-    <div class="lm-top"><div class="marca-logo" id="logoLogin"></div><span class="nombreProducto"></span></div>
-    <div class="lm-centro">
-      <div>
-        <h1>Cada venta cuadra con tu inventario.</h1>
-        <p>Cobra, controla el stock, lleva los fiados, cuadra la caja y factura electrónicamente desde un solo lugar.</p>
-      </div>
-      <div class="recibo-demo" aria-hidden="true">
-        <b>Tu tienda</b>
-        <div class="rd-c">Venta #1284 · 8:42 a. m.</div>
-        <hr>
-        <div class="rd-l"><span>2 × Arroz 500 g</span><span>$6.000</span></div>
-        <div class="rd-l"><span>1 × Leche entera 1 L</span><span>$4.200</span></div>
-        <div class="rd-l"><span>3 × Pan tajado</span><span>$9.900</span></div>
-        <div class="rd-l"><span>1 × Huevos × 12</span><span>$7.800</span></div>
-        <hr>
-        <div class="rd-t"><span>Total</span><span>$27.900</span></div>
-        <div class="rd-l"><span>Efectivo</span><span>$50.000</span></div>
-        <div class="rd-l"><span>Cambio</span><span>$22.100</span></div>
-        <hr>
-        <div class="rd-c">¡Gracias por su compra!</div>
-      </div>
-    </div>
-    <div class="lm-pie" id="pieLogin"></div>
+<section id="pantallaLogin" class="ingreso hidden">
+  <div class="ingreso-marca"><div class="marca-logo" id="logoLogin"></div><span class="nombreProducto"></span></div>
+  <div class="ingreso-caja">
+    <h1>Iniciar sesión</h1>
+    <p class="muted" style="margin:6px 0 0">Entra con el correo y la contraseña que te dio el administrador.</p>
+    <form id="formLogin">
+      <label for="email">Correo</label>
+      <input type="email" id="email" required autocomplete="email">
+      <label for="password">Contraseña</label>
+      <div class="clave"><input type="password" id="password" required minlength="6" autocomplete="current-password"><button type="button" class="btn" id="verClave" aria-label="Mostrar u ocultar la contraseña"></button></div>
+      <button class="btn btn-primary btn-lg" type="submit" id="btnLogin">Entrar</button>
+      <div class="msg" id="msgLogin"></div>
+      <p class="small muted" style="margin:10px 0 0">¿Olvidaste tu contraseña? Pídele al administrador una nueva.</p>
+    </form>
   </div>
-  <div class="login-form">
-    <div class="lf-caja">
-      <h2>Iniciar sesión</h2>
-      <p class="muted" style="margin:6px 0 0">Entra con el correo y la contraseña que te entregó el administrador.</p>
-      <form id="formLogin">
-        <label for="email">Correo</label>
-        <input type="email" id="email" required autocomplete="email">
-        <label for="password">Contraseña</label>
-        <div class="clave"><input type="password" id="password" required minlength="6" autocomplete="current-password"><button type="button" class="btn" id="verClave" aria-label="Mostrar u ocultar la contraseña"></button></div>
-        <button class="btn btn-primary btn-lg" type="submit" id="btnLogin">Entrar</button>
-        <div class="msg" id="msgLogin"></div>
-        <p class="small muted" style="margin:10px 0 0">¿Olvidaste tu contraseña? Pídele al administrador que te asigne una nueva.</p>
-      </form>
-    </div>
-  </div>
+  <div class="ingreso-pie" id="pieLogin"></div>
 </section>
 
 <!-- ========== SIN TIENDA / SUSPENDIDA ========== -->
@@ -79,30 +54,17 @@
 </section>
 
 <!-- ========== APLICACIÓN ========== -->
-<div id="app" class="app hidden">
-  <aside class="sidebar" id="menu">
-    <div class="marca"><div class="marca-logo" id="logoTienda"></div><div style="min-width:0"><b id="nombreTienda"></b><span class="sb-sub nombreProducto"></span></div></div>
-    <nav id="nav" aria-label="Secciones"></nav>
-    <div class="sb-pie">
-      <button class="nav-btn" id="btnColapsar"></button>
-      <div class="sb-version" id="pieDesarrollador"></div>
+<div id="app" class="tienda-app hidden">
+  <header class="barra">
+    <div class="barra-in">
+      <button class="marca" id="btnMarca" title="Ir al inicio"><div class="marca-logo" id="logoTienda"></div><b id="nombreTienda"></b></button>
+      <nav id="nav" class="nav-top" aria-label="Secciones"></nav>
+      <button class="usuario" id="btnUsuario" aria-label="Mi cuenta"><span class="avatar" id="avatar"></span><span class="u-txt"><b id="usuarioNombre"></b><small id="usuarioRol"></small></span></button>
     </div>
-  </aside>
-  <div class="principal">
-    <header class="topbar">
-      <button class="icon-btn solo-movil" id="btnMenu" aria-label="Abrir el menú"></button>
-      <div class="migas" id="migas"></div>
-      <button class="tb-buscar" id="btnPaleta" aria-label="Buscar"></button>
-      <div class="tb-acciones">
-        <button class="pill-caja" id="pillCaja"><i></i><span id="txtCaja">Caja cerrada</span></button>
-        <button class="icon-btn" id="btnNotif" aria-label="Avisos"><span class="punto hidden" id="numNotif"></span></button>
-        <button class="tb-usuario" id="btnUsuario" aria-label="Mi cuenta"><span class="avatar" id="avatar"></span><span class="tb-u-txt"><b id="usuarioNombre"></b><small id="usuarioRol"></small></span></button>
-      </div>
-    </header>
-    <main id="contenido"></main>
-  </div>
+  </header>
+  <main id="contenido"></main>
+  <nav id="navAbajo" class="nav-abajo" aria-label="Secciones"></nav>
 </div>
-<div class="velo hidden" id="velo"></div>
 
 <div id="modales"></div>
 <div id="tiquete"></div>
@@ -114,7 +76,7 @@
    ===================================================================== */
 const PRODUCTO = 'Inventario Tienda';       // nombre comercial de tu software
 const DESARROLLADOR = '';                   // ej: 'Desarrollado por Mi Empresa SAS' (vacío = no se muestra)
-const VERSION = '6.0';                     // versión que se muestra en el menú
+const VERSION = '7.0';                     // versión que se muestra en el menú
 const SUPABASE_URL = 'https://iibwvxuchcoeyzrmocju.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_fUlURD_H_Tzg5TY1LFp6Ew_nn1pfOMB';
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -182,6 +144,8 @@ const ICONOS = {
   teclado: '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>',
   editar: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>',
   descargar: '<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/>',
+  atras: '<path d="M15 6l-6 6 6 6"/>',
+  reiniciar: '<path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
 };
 const ico = n => `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONOS[n] || ''}</svg>`;
 
@@ -409,16 +373,8 @@ function aplicarMarca() {
   $('logoAviso').innerHTML = ico('tienda');
   $('nombreTienda').textContent = t?.nombre || PRODUCTO;
   document.title = (t?.nombre ? t.nombre + ' | ' : '') + PRODUCTO;
-  const proveedor = E.plataforma?.nombre ? 'Software de ' + E.plataforma.nombre : DESARROLLADOR;
-  $('pieDesarrollador').innerHTML = `Versión ${VERSION}${proveedor ? '<br>' + esc(proveedor) : ''}`;
+  E.pie = `Versión ${VERSION}${E.plataforma?.nombre ? ', software de ' + E.plataforma.nombre : DESARROLLADOR ? ', ' + DESARROLLADOR : ''}`;
   $('pieLogin').textContent = DESARROLLADOR || `${PRODUCTO}, versión ${VERSION}`;
-}
-
-function aplicarColapso(c) {
-  $('app').classList.toggle('colapsado', c);
-  guardarLocal('colapsado', c ? '1' : '');
-  $('btnColapsar').innerHTML = ico('colapsar') + `<span>${c ? 'Expandir el menú' : 'Contraer el menú'}</span>`;
-  $('btnColapsar').title = c ? 'Expandir el menú' : 'Contraer el menú';
 }
 
 /* =====================================================================
@@ -507,40 +463,70 @@ async function iniciar() {
   mostrarPantalla('app');
   pintarNav();
   await cargarDatos();
-  irA('inicio');
+  irA(esDueno() ? 'inicio' : 'vender');
 }
 
 /* =====================================================================
    NAVEGACIÓN
    ===================================================================== */
+// Paquetes que el administrador activa por empresa (el punto de venta siempre está)
+const MODULOS = {
+  caja: { n: 'Caja', d: 'Abrir y cerrar caja, gastos, retiros y cuadre del efectivo' },
+  inventario: { n: 'Inventario', d: 'Stock, entradas de mercancía, vencimientos y pedido sugerido' },
+  clientes: { n: 'Clientes y fiados', d: 'Ventas fiadas, abonos y cobro por WhatsApp' },
+  reportes: { n: 'Reportes y contabilidad', d: 'Utilidad, gastos, impuestos, compras y exportar a Excel' },
+};
+// Sin la lista de paquetes (base de datos sin la migración 9) todo queda activo
+const tieneModulo = m => !Array.isArray(E.tienda?.modulos) || E.tienda.modulos.includes(m);
+
 const VISTAS = {
   inicio:    { t: 'Inicio', g: 'Operación', f: () => verInicio() },
   vender:    { t: 'Vender', g: 'Operación', f: () => verVender() },
-  caja:      { t: 'Caja', g: 'Operación', f: () => verCaja() },
-  clientes:  { t: 'Clientes y fiados', g: 'Operación', f: () => verClientes() },
+  caja:      { t: 'Caja', g: 'Operación', f: () => verCaja(), mod: 'caja' },
+  clientes:  { t: 'Clientes', g: 'Operación', f: () => verClientes(), mod: 'clientes' },
   productos: { t: 'Productos', g: 'Inventario', f: () => verProductos() },
-  entradas:  { t: 'Entradas', g: 'Inventario', f: () => verEntradas() },
+  entradas:  { t: 'Entradas', g: 'Inventario', f: () => verEntradas(), mod: 'inventario', oculta: true },
   reportes:  { t: 'Reportes', g: 'Gestión', f: () => verReportes(), dueno: true },
   config:    { t: 'Mi tienda', g: 'Gestión', f: () => verConfig(), dueno: true },
 };
+// Sin el paquete de reportes, la pantalla queda solo con el historial de ventas
+const tituloVista = k => k === 'reportes' && !tieneModulo('reportes') ? 'Ventas' : VISTAS[k].t;
+const iconoVista = k => k === 'reportes' && !tieneModulo('reportes') ? 'factura' : k;
 function vistasPermitidas() {
   if (!E.tienda) return [];
-  return Object.keys(VISTAS).filter(k => !VISTAS[k].dueno || esDueno());
+  return Object.keys(VISTAS).filter(k => (!VISTAS[k].dueno || esDueno()) && (!VISTAS[k].mod || tieneModulo(VISTAS[k].mod)));
+}
+// En el celular caben 4 botones abajo; el resto va en "Más"
+const EN_BARRA = 4;
+function botonNav(k) {
+  const marca = k === 'inicio' && E.avisos?.length ? `<span class="cuenta-nav" title="Cosas por revisar">${E.avisos.length}</span>`
+    : k === 'caja' && E.caja ? '<span class="punto-nav" title="Caja abierta"></span>'
+    : k === 'vender' && E.espera.length ? `<span class="cuenta-nav" title="Ventas guardadas">${E.espera.length}</span>` : '';
+  return `<button data-vista="${k}">${ico(iconoVista(k))}<span>${tituloVista(k)}</span>${marca}</button>`;
 }
 function pintarNav() {
-  const vs = vistasPermitidas();
-  const grupos = [...new Set(vs.map(k => VISTAS[k].g))];
-  $('nav').innerHTML = grupos.map(g => `<div class="nav-grupo">${g}</div>` + vs.filter(k => VISTAS[k].g === g).map(k =>
-    `<button class="nav-btn" data-vista="${k}" title="${VISTAS[k].t}">${ico(k)}<span>${VISTAS[k].t}</span>${k === 'vender' && E.espera.length ? `<span class="contador" title="Ventas en espera">${E.espera.length}</span>` : ''}</button>`).join('')).join('');
-  $('nav').querySelectorAll('[data-vista]').forEach(b => b.onclick = () => irA(b.dataset.vista));
+  const vs = vistasPermitidas().filter(k => !VISTAS[k].oculta);
+  $('nav').innerHTML = vs.map(botonNav).join('');
+  const abajo = vs.length <= EN_BARRA + 1 ? vs : vs.slice(0, EN_BARRA);
+  $('navAbajo').innerHTML = abajo.map(botonNav).join('') + (vs.length > abajo.length ? `<button data-mas>${ico('menu')}<span>Más</span></button>` : '');
+  document.querySelectorAll('#nav [data-vista], #navAbajo [data-vista]').forEach(b => b.onclick = () => irA(b.dataset.vista));
+  $('navAbajo').querySelector('[data-mas]')?.addEventListener('click', () => abrirMas(vs.slice(EN_BARRA)));
   marcarNav();
 }
+function abrirMas(lista) {
+  const m = abrirModal(`<h2>Más</h2><div class="lista-mas">${lista.map(k => `<button data-ir="${k}">${ico(iconoVista(k))}<span>${tituloVista(k)}</span></button>`).join('')}</div>
+    <div class="modal-acciones"><button class="btn" data-cerrar>Cerrar</button></div>`);
+  m.el.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => { m.cerrar(); irA(b.dataset.ir); });
+}
 function marcarNav() {
-  $('nav').querySelectorAll('[data-vista]').forEach(b => {
-    const a = b.dataset.vista === E.vista;
+  const actual = E.vista === 'entradas' ? 'productos' : E.vista;
+  document.querySelectorAll('#nav [data-vista], #navAbajo [data-vista]').forEach(b => {
+    const a = b.dataset.vista === actual;
     b.classList.toggle('activa', a);
     if (a) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
   });
+  const mas = $('navAbajo').querySelector('[data-mas]');
+  if (mas) mas.classList.toggle('activa', ![...$('navAbajo').querySelectorAll('[data-vista]')].some(b => b.dataset.vista === actual));
 }
 function irA(vista) {
   const vs = vistasPermitidas();
@@ -548,8 +534,7 @@ function irA(vista) {
   if (!vs.includes(vista)) vista = vs[0];
   E.vista = vista;
   marcarNav();
-  $('migas').innerHTML = `<span class="grupo-miga">${VISTAS[vista].g}</span><span class="grupo-miga">${ico('chevron')}</span><b>${VISTAS[vista].t}</b>`;
-  cerrarMenu(); cerrarPops();
+  cerrarPops();
   $('tooltipGraf')?.classList.add('hidden');
   window.scrollTo(0, 0);
   $('contenido').classList.remove('con-barra-movil');
@@ -560,24 +545,10 @@ function encabezado(titulo, sub = '', acciones = '') {
 }
 
 // ----- Barra superior -----
-$('btnMenu').innerHTML = ico('menu');
-$('btnMenu').onclick = () => { $('menu').classList.add('abierto'); $('velo').classList.remove('hidden'); };
-$('velo').onclick = cerrarMenu;
-function cerrarMenu() { $('menu').classList.remove('abierto'); $('velo').classList.add('hidden'); }
-$('btnColapsar').onclick = () => aplicarColapso(!$('app').classList.contains('colapsado'));
-$('btnPaleta').innerHTML = ico('buscar') + '<span>Buscar productos, clientes o pantallas</span><kbd>Ctrl K</kbd>';
-$('btnPaleta').onclick = () => abrirPaleta();
-$('btnNotif').insertAdjacentHTML('afterbegin', ico('campana'));
-$('btnNotif').onclick = () => menuAvisos();
+$('btnMarca').onclick = () => irA('inicio');
 $('btnUsuario').onclick = () => menuUsuario();
-$('pillCaja').onclick = () => irA('caja');
-
-function pintarCaja() {
-  const p = $('pillCaja');
-  p.classList.toggle('abierta', !!E.caja);
-  $('txtCaja').textContent = E.caja ? 'Caja abierta' : 'Caja cerrada';
-  p.title = E.caja ? 'Abierta desde ' + fechaHora(E.caja.abierta_en) : 'Abre la caja para poder vender';
-}
+const cerrarMenu = () => {};
+function pintarCaja() { if (E.tienda) pintarNav(); }
 
 function menuUsuario() {
   const oscuro = document.documentElement.dataset.theme === 'dark';
@@ -587,7 +558,8 @@ function menuUsuario() {
     <button class="menu-item" data-a="tema">${ico(oscuro ? 'sol' : 'luna')}<span>${oscuro ? 'Usar modo claro' : 'Usar modo oscuro'}</span></button>
     <button class="menu-item" data-a="atajos">${ico('teclado')}<span>Atajos de teclado</span></button>
     ${esDueno() ? `<button class="menu-item" data-a="tienda">${ico('config')}<span>Mi tienda</span></button>` : ''}
-    <button class="menu-item" data-a="salir">${ico('salir')}<span>Cerrar sesión</span></button>`, { ancho: 290 });
+    <button class="menu-item" data-a="salir">${ico('salir')}<span>Cerrar sesión</span></button>
+    <div class="small muted" style="padding:10px 12px 4px;border-top:1px solid var(--line-2);margin-top:4px">${esc(E.pie || '')}</div>`, { ancho: 290 });
   p.pop.querySelectorAll('[data-a]').forEach(b => b.onclick = () => {
     const a = b.dataset.a; p.cerrar();
     if (a === 'tema') alternarTema();
@@ -612,8 +584,8 @@ async function calcularAvisos(forzar = false) {
   if (forzar || Date.now() - avisosRemotos.t > 120000) {
     avisosRemotos.t = Date.now();
     try {
-      if (!cacheVence) cacheVence = await porVencerIds();
-      avisosRemotos.vence = [...cacheVence].filter(id => { const p = prodPorId(id); return p && p.activo && p.stock > 0; }).length;
+      if (!cacheVence && tieneModulo('inventario')) cacheVence = await porVencerIds();
+      avisosRemotos.vence = [...(cacheVence || [])].filter(id => { const p = prodPorId(id); return p && p.activo && p.stock > 0; }).length;
     } catch (e) {}
     if (E.tienda.fe_activa) {
       const { data } = await db.from('ventas').select('id').eq('estado', 'activa').eq('fe_estado', 'error').gte('fecha', sumarDias(new Date(), -30).toISOString()).limit(100);
@@ -621,28 +593,21 @@ async function calcularAvisos(forzar = false) {
     }
   }
   const lista = [];
-  const bajo = activos().filter(p => Number(p.stock_minimo) > 0 && p.stock <= Number(p.stock_minimo));
+  const conInv = tieneModulo('inventario');
+  const bajo = conInv ? activos().filter(p => Number(p.stock_minimo) > 0 && p.stock <= Number(p.stock_minimo)) : [];
   const agotados = bajo.filter(p => p.stock <= 0).length;
-  if (bajo.length) lista.push({ tipo: agotados ? 'peligro' : 'aviso', ico: 'productos', t: `${plural(bajo.length, 'producto', 'productos')} con stock bajo`, d: agotados ? `${plural(agotados, 'está agotado', 'están agotados')}` : 'Revisa el pedido sugerido en Inicio', ir: () => { E.filtroProd.estado = 'bajo'; irA('productos'); } });
-  if (avisosRemotos.vence) lista.push({ tipo: 'aviso', ico: 'reloj', t: `${plural(avisosRemotos.vence, 'producto', 'productos')} por vencer`, d: 'Vencen en los próximos 30 días o ya vencieron', ir: () => { E.filtroProd.estado = 'vence'; irA('productos'); } });
-  if (avisosRemotos.feError) lista.push({ tipo: 'peligro', ico: 'factura', t: `${plural(avisosRemotos.feError, 'factura electrónica', 'facturas electrónicas')} sin generar`, d: esDueno() ? 'Revísalas en Reportes, pestaña Ventas' : 'Avísale al dueño de la tienda', ir: esDueno() ? () => { E.tabReporte = 'ventas'; E.filtroVentas.fe = 'error'; E.periodo = 'mes'; irA('reportes'); } : null });
-  if (E.caja && (Date.now() - new Date(E.caja.abierta_en)) / 36e5 > 14) lista.push({ tipo: 'aviso', ico: 'caja', t: 'La caja lleva abierta más de 14 horas', d: 'Ciérrala al terminar cada turno para cuadrar el efectivo', ir: () => irA('caja') });
+  if (bajo.length) lista.push({ tipo: agotados ? 'peligro' : 'aviso', ico: 'productos', t: `${plural(bajo.length, 'producto', 'productos')} por pedir`, d: agotados ? `${plural(agotados, 'está agotado', 'están agotados')}, el resto está en el mínimo` : 'Están en el stock mínimo o por debajo', boton: 'Pedido sugerido', ir: () => modalPedidoSugerido() });
+  if (conInv && avisosRemotos.vence) lista.push({ tipo: 'aviso', ico: 'reloj', t: `${plural(avisosRemotos.vence, 'producto', 'productos')} por vencer`, d: 'Vencen en los próximos 30 días o ya vencieron', boton: 'Ver productos', ir: () => { E.filtroProd.estado = 'vence'; irA('productos'); } });
+  if (avisosRemotos.feError) lista.push({ tipo: 'peligro', ico: 'factura', t: `${plural(avisosRemotos.feError, 'factura electrónica', 'facturas electrónicas')} sin generar`, d: esDueno() ? (avisosRemotos.feError === 1 ? 'Revísala y vuelve a intentarlo' : 'Revísalas y vuelve a intentarlo') : 'Avísale al dueño de la tienda', boton: 'Revisar', ir: esDueno() ? () => { E.tabReporte = 'ventas'; E.filtroVentas.fe = 'error'; E.periodo = 'mes'; irA('reportes'); } : null });
+  if (tieneModulo('caja') && E.caja && (Date.now() - new Date(E.caja.abierta_en)) / 36e5 > 14) lista.push({ tipo: 'aviso', ico: 'caja', t: 'La caja lleva abierta más de 14 horas', d: 'Ciérrala al terminar cada turno para cuadrar el efectivo', boton: 'Ir a caja', ir: () => irA('caja') });
   if (esDueno() && E.tienda.proximo_pago) {
     const dias = diasHasta(E.tienda.proximo_pago);
-    if (dias <= 5) lista.push({ tipo: dias < 0 ? 'peligro' : 'info', ico: 'plan', t: dias < 0 ? 'Tu suscripción está vencida' : dias === 0 ? 'Tu suscripción vence hoy' : `Tu suscripción vence en ${plural(dias, 'día', 'días')}`, d: 'Comunícate con el administrador para renovarla', ir: () => { E.tabConfig = 'plan'; irA('config'); } });
+    if (dias <= 5) lista.push({ tipo: dias < 0 ? 'peligro' : 'info', ico: 'plan', t: dias < 0 ? 'Tu suscripción está vencida' : dias === 0 ? 'Tu suscripción vence hoy' : `Tu suscripción vence en ${plural(dias, 'día', 'días')}`, d: 'Comunícate con el administrador para renovarla', boton: 'Ver plan', ir: () => { E.tabConfig = 'plan'; irA('config'); } });
   }
   E.avisos = lista;
-  $('numNotif').textContent = lista.length;
-  $('numNotif').classList.toggle('hidden', !lista.length);
+  pintarNav();
+  if (E.vista === 'inicio') pintarPendientes();
 }
-function menuAvisos() {
-  const lista = E.avisos || [];
-  const p = menuPop($('btnNotif'), `<div class="mp-cab"><b>Avisos</b><span class="small muted">${lista.length ? 'Lo que necesita tu atención' : 'Todo en orden por ahora'}</span></div>` +
-    (lista.length ? lista.map((a, i) => `<button class="menu-item" data-i="${i}"><span class="chip-ico ${a.tipo}">${ico(a.ico)}</span><span class="grow">${esc(a.t)}<small>${esc(a.d)}</small></span></button>`).join('')
-      : vacioBloque('check', 'No hay avisos pendientes.')), { ancho: 350 });
-  p.pop.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { const a = lista[+b.dataset.i]; p.cerrar(); a.ir && a.ir(); });
-}
-
 // ----- Búsqueda global (Ctrl + K) -----
 function abrirPaleta() {
   if (!E.tienda || $('paleta')) return;
@@ -660,11 +625,11 @@ function abrirPaleta() {
   fondo.addEventListener('mousedown', e => { if (e.target === fondo) cerrar(); });
   const acciones = () => [
     { g: 'Acciones', t: 'Nueva venta', d: 'Atajo F1', ico: 'vender', f: () => irA('vender') },
-    { g: 'Acciones', t: E.caja ? 'Cerrar la caja' : 'Abrir la caja', ico: 'caja', f: () => irA('caja') },
-    E.caja && { g: 'Acciones', t: 'Registrar un gasto, retiro o ingreso de caja', ico: 'gasto', f: () => modalMovCaja('gasto') },
-    { g: 'Acciones', t: 'Nuevo cliente', ico: 'clientes', f: () => modalCliente(null, () => { if (E.vista === 'clientes') verClientes(); }) },
+    tieneModulo('caja') && { g: 'Acciones', t: E.caja ? 'Cerrar la caja' : 'Abrir la caja', ico: 'caja', f: () => irA('caja') },
+    tieneModulo('caja') && E.caja && { g: 'Acciones', t: 'Registrar un gasto, retiro o ingreso de caja', ico: 'gasto', f: () => modalMovCaja('gasto') },
+    tieneModulo('clientes') && { g: 'Acciones', t: 'Nuevo cliente', ico: 'clientes', f: () => modalCliente(null, () => { if (E.vista === 'clientes') verClientes(); }) },
     esDueno() && { g: 'Acciones', t: 'Nuevo producto', ico: 'mas', f: () => modalProducto() },
-    { g: 'Acciones', t: 'Registrar entrada de mercancía', ico: 'entradas', f: () => irA('entradas') },
+    tieneModulo('inventario') && { g: 'Acciones', t: 'Registrar entrada de mercancía', ico: 'entradas', f: () => irA('entradas') },
     esDueno() && { g: 'Acciones', t: 'Imprimir etiquetas de precio', ico: 'etiqueta', f: () => modalEtiquetas(activos()) },
     E.espera.length && { g: 'Acciones', t: 'Ver ventas en espera', d: plural(E.espera.length, 'venta guardada', 'ventas guardadas'), ico: 'reloj', f: () => { irA('vender'); modalEspera(); } },
     { g: 'Acciones', t: document.documentElement.dataset.theme === 'dark' ? 'Usar modo claro' : 'Usar modo oscuro', ico: 'luna', f: alternarTema },
@@ -672,10 +637,10 @@ function abrirPaleta() {
   ].filter(Boolean);
   const pintar = () => {
     const q = inp.value.trim().toLowerCase();
-    const pantallas = vistasPermitidas().map(k => ({ g: 'Pantallas', t: VISTAS[k].t, d: VISTAS[k].g, ico: k, f: () => irA(k) }));
+    const pantallas = vistasPermitidas().map(k => ({ g: 'Pantallas', t: tituloVista(k), ico: iconoVista(k), f: () => irA(k) }));
     const base = [...pantallas, ...acciones()].filter(x => !q || x.t.toLowerCase().includes(q));
     const prods = q ? activos().filter(p => p.nombre.toLowerCase().includes(q) || (p.codigo_barras || '').includes(q)).slice(0, 6)
-      .map(p => ({ g: 'Productos: agregar a la venta', t: p.nombre, d: `${pesos(p.precio_venta)}, stock ${numero(p.stock)}`, ico: 'productos', f: () => { if (E.vista !== 'vender') irA('vender'); agregarAlCarrito(p); } })) : [];
+      .map(p => ({ g: 'Productos: agregar a la venta', t: p.nombre, d: pesos(p.precio_venta) + (tieneModulo('inventario') ? `, stock ${numero(p.stock)}` : ''), ico: 'productos', f: () => { if (E.vista !== 'vender') irA('vender'); agregarAlCarrito(p); } })) : [];
     const clis = q ? E.clientes.filter(c => c.nombre.toLowerCase().includes(q) || (c.documento || '').includes(q) || (c.telefono || '').includes(q)).slice(0, 4)
       .map(c => ({ g: 'Clientes', t: c.nombre, d: c.saldo > 0 ? 'Debe ' + pesos(c.saldo) : 'Sin deuda', ico: 'clientes', f: () => modalHistorialCliente(c) })) : [];
     items = [...prods, ...clis, ...base];
@@ -747,7 +712,7 @@ function montarBuscador(inputId, resId, alElegir) {
   const pintar = () => {
     lista = coincidencias(input.value); sel = 0;
     if (!input.value.trim()) { res.classList.add('hidden'); return; }
-    res.innerHTML = lista.length ? lista.map((p, i) => `<div data-i="${i}" class="${i === 0 ? 'sel' : ''}"><span><strong>${esc(p.nombre)}</strong><br><span class="small muted">${esc(p.codigo_barras || 'Sin código')}</span></span><span class="num">${pesos(p.precio_venta)}<br><span class="small muted">Stock: ${numero(p.stock)}</span></span></div>`).join('')
+    res.innerHTML = lista.length ? lista.map((p, i) => `<div data-i="${i}" class="${i === 0 ? 'sel' : ''}"><span><strong>${esc(p.nombre)}</strong><br><span class="small muted">${esc(p.codigo_barras || 'Sin código')}</span></span><span class="num">${pesos(p.precio_venta)}${tieneModulo('inventario') ? `<br><span class="small muted">Stock: ${numero(p.stock)}</span>` : ''}</span></div>`).join('')
       : '<div style="cursor:default" class="muted">No se encontró el producto</div>';
     res.classList.remove('hidden');
   };
@@ -789,114 +754,65 @@ function elegirPorCodigo(codigo, alElegir) {
 async function verInicio() {
   const c = $('contenido');
   const nombre = (E.nombre || '').split(' ')[0];
-  const fecha = new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const fecha = new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' });
+  const conClientes = tieneModulo('clientes');
   const porCobrar = E.clientes.reduce((t, x) => t + Math.max(x.saldo, 0), 0);
   const deudores = E.clientes.filter(x => x.saldo > 0).length;
-  const bajo = activos().filter(p => Number(p.stock_minimo) > 0 && p.stock <= Number(p.stock_minimo)).sort((a, b) => a.stock - b.stock);
   c.innerHTML = encabezado(`${saludo()}, ${esc(nombre)}`, fecha.charAt(0).toUpperCase() + fecha.slice(1),
-      `<button class="btn btn-primary" data-ir="vender">${ico('vender')}Nueva venta <kbd>F1</kbd></button>`) +
-    (!E.caja ? `<div class="aviso-caja"><span>${ico('caja')}La caja está cerrada. Ábrela para empezar a vender.</span><button class="btn btn-sm" data-ir="caja">Abrir caja</button></div>` : '') +
-    `<div class="kpis" id="kpisHoy">${kpiCargando(esDueno() ? 5 : 4)}</div>` +
-    (esDueno() ? `<div class="col-ancha">
-        <div class="panel"><div class="panel-cab"><div><h2>Ventas de los últimos 14 días</h2><p class="sub" id="sub14">Total vendido por día</p></div><button class="link" data-ir="reportes">Ver reportes</button></div><div id="graf14"></div></div>
-        <div class="panel"><div class="panel-cab"><div><h2>Lo más vendido hoy</h2><p class="sub">Por valor vendido</p></div></div><div id="topHoy"></div></div>
-      </div>
-      <div class="panel" style="margin-top:16px"><div class="panel-cab"><div><h2>Horas de más venta</h2><p class="sub" id="subHoras">Valor vendido por hora en los últimos 14 días</p></div></div><div id="grafHoras"></div></div>` : '') +
-    `<div class="dos-col" style="margin-top:16px">
-      <div class="panel"><div class="panel-cab"><div><h2>Stock bajo</h2><p class="sub">Productos en o por debajo del mínimo</p></div>${bajo.length > 8 ? '<button class="link" id="verBajo">Ver todos</button>' : ''}</div><div id="listaBajo"></div></div>
-      <div class="panel"><div class="panel-cab"><div><h2>Por vencer</h2><p class="sub">Según la última entrada con fecha de vencimiento</p></div></div><div id="listaVence">${vacioBloque('reloj', 'Revisando fechas…')}</div></div>
-    </div>
-    <div class="panel" style="margin-top:16px"><div class="panel-cab"><div><h2>Pedido sugerido por proveedor</h2><p class="sub">Cantidades para volver a tener el doble del stock mínimo. Envíalo por WhatsApp con un toque.</p></div></div><div id="pedido"></div></div>`;
+      `<button class="btn btn-primary btn-lg" data-ir="vender">${ico('vender')}Nueva venta</button>`) +
+    (tieneModulo('caja') && !E.caja ? `<div class="aviso-caja"><span>${ico('caja')}La caja está cerrada. Ábrela para empezar a vender.</span><button class="btn btn-sm" data-ir="caja">Abrir caja</button></div>` : '') +
+    `<div class="kpis" id="kpisHoy">${kpiCargando(1 + (esDueno() ? 1 : 0) + (conClientes ? 1 : 0))}</div>
+    <div class="panel"><h2>Para revisar</h2><p class="sub">Lo que necesita tu atención hoy</p><div id="pendientes"></div></div>`;
   c.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => irA(b.dataset.ir));
-  $('verBajo')?.addEventListener('click', () => { E.filtroProd.estado = 'bajo'; irA('productos'); });
+  pintarPendientes();
 
-  // Stock bajo
-  $('listaBajo').innerHTML = bajo.length ? `<div class="tabla-wrap"><table><tbody>${bajo.slice(0, 8).map(p =>
-    `<tr><td><b>${esc(p.nombre)}</b><br><span class="small muted">${esc(nombreProveedor(p.proveedor_id) || 'Sin proveedor')}</span></td><td class="num"><span class="badge ${p.stock <= 0 ? 'bajo' : 'aviso'}">${p.stock <= 0 ? 'Agotado' : numero(p.stock)}</span><br><span class="small muted">mínimo ${numero(p.stock_minimo)}</span></td></tr>`).join('')}</tbody></table></div>`
-    : vacioBloque('check', 'Todo el inventario está por encima del mínimo.');
-
-  // Pedido sugerido
-  const porProv = {};
-  bajo.forEach(p => { (porProv[p.proveedor_id || 0] ||= []).push({ p, cant: Math.max(Math.ceil(Number(p.stock_minimo) * 2 - p.stock), 1) }); });
-  const claves = Object.keys(porProv);
-  $('pedido').innerHTML = claves.length ? `<div class="tabla-wrap"><table><tbody>${claves.map(k => {
-    const prov = E.proveedores.find(x => x.id === Number(k));
-    const costo = porProv[k].reduce((t, x) => t + x.cant * Number(x.p.precio_compra || 0), 0);
-    return `<tr><td style="width:30%"><b>${esc(prov?.nombre || 'Sin proveedor asignado')}</b><br><span class="small muted">${plural(porProv[k].length, 'producto', 'productos')}${esDueno() ? ', costo aprox. ' + pesos(costo) : ''}</span></td>
-      <td class="small">${porProv[k].map(x => `${numero(x.cant)} × ${esc(x.p.nombre)}`).join('<br>')}</td>
-      <td class="acciones">${prov?.telefono ? `<button class="btn btn-sm" data-wa="${k}">${ico('whatsapp')}Enviar pedido</button>` : prov ? '<span class="small muted">Sin teléfono</span>' : ''}</td></tr>`;
-  }).join('')}</tbody></table></div>` : vacioBloque('check', 'No hay productos para pedir.');
-  $('pedido').querySelectorAll('[data-wa]').forEach(b => b.onclick = () => {
-    const prov = E.proveedores.find(x => x.id === Number(b.dataset.wa));
-    const texto = `Hola ${prov.contacto || prov.nombre}, de ${E.tienda.nombre} quiero hacer este pedido:\n` + porProv[b.dataset.wa].map(x => `- ${numero(x.cant)} ${x.p.nombre}`).join('\n') + '\nGracias.';
-    abrirWhatsApp(prov.telefono, texto);
-  });
-
-  // Ventas: hoy para todos, 14 días para el dueño
   const hoy0 = inicioDia(new Date()), ayer0 = sumarDias(hoy0, -1);
   let ventas = [];
   try {
-    ventas = await todo(() => db.from('ventas').select('fecha, total, movimientos(producto_id, cantidad, precio_unitario, costo_unitario, tipo)')
-      .eq('estado', 'activa').gte('fecha', (esDueno() ? sumarDias(hoy0, -13) : hoy0).toISOString()).order('fecha'));
+    ventas = await todo(() => db.from('ventas').select('fecha, total, movimientos(producto_id, cantidad, costo_unitario, tipo)')
+      .eq('estado', 'activa').gte('fecha', (esDueno() ? ayer0 : hoy0).toISOString()).order('fecha'));
   } catch (e) { aviso(errorTexto(e), 'error'); }
   if (!$('kpisHoy')) return;
   const suma = l => l.reduce((t, v) => t + Number(v.total), 0);
-  const deHoy = ventas.filter(v => new Date(v.fecha) >= hoy0);
-  const deAyer = ventas.filter(v => { const f = new Date(v.fecha); return f >= ayer0 && f < hoy0; });
-  const lineasHoy = deHoy.flatMap(v => (v.movimientos || []).filter(m => m.tipo === 'venta'));
-  const costoHoy = lineasHoy.reduce((t, m) => t + Number(m.cantidad) * Number(m.costo_unitario ?? prodPorId(m.producto_id)?.precio_compra ?? 0), 0);
+  const deHoy = ventas.filter(v => new Date(v.fecha) >= hoy0), deAyer = ventas.filter(v => new Date(v.fecha) < hoy0);
+  const costoHoy = deHoy.flatMap(v => (v.movimientos || []).filter(m => m.tipo === 'venta'))
+    .reduce((t, m) => t + Number(m.cantidad) * Number(m.costo_unitario ?? prodPorId(m.producto_id)?.precio_compra ?? 0), 0);
   const totalHoy = suma(deHoy);
   $('kpisHoy').innerHTML = `
-    <div class="kpi"><span>Vendido hoy</span><strong>${pesos(totalHoy)}</strong><small>${esDueno() ? 'Ayer: ' + pesos(suma(deAyer)) : 'Ventas activas del día'}</small></div>
-    <div class="kpi"><span>Ventas hoy</span><strong>${deHoy.length}</strong><small>Promedio ${pesos(deHoy.length ? totalHoy / deHoy.length : 0)}</small></div>
-    ${esDueno() ? `<div class="kpi bueno"><span>Ganancia hoy</span><strong>${pesos(totalHoy - costoHoy)}</strong><small>Margen ${porcentaje(totalHoy - costoHoy, totalHoy)} %</small></div>` : ''}
-    <div class="kpi"><span>Fiado por cobrar</span><strong>${pesos(porCobrar)}</strong><small>${plural(deudores, 'cliente debe', 'clientes deben')}</small></div>
-    <div class="kpi ${bajo.length ? 'alerta' : ''}"><span>Con stock bajo</span><strong>${bajo.length}</strong><small>${plural(bajo.filter(p => p.stock <= 0).length, 'agotado', 'agotados')}</small></div>`;
+    <div class="kpi"><span>Vendido hoy</span><strong>${pesos(totalHoy)}</strong><small>${plural(deHoy.length, 'venta', 'ventas')}${esDueno() ? ', ayer ' + pesos(suma(deAyer)) : ''}</small></div>
+    ${esDueno() ? `<div class="kpi bueno"><span>Ganancia hoy</span><strong>${pesos(totalHoy - costoHoy)}</strong><small>Lo vendido menos lo que costó</small></div>` : ''}
+    ${conClientes ? `<div class="kpi"><span>Te deben en fiados</span><strong>${pesos(porCobrar)}</strong><small>${plural(deudores, 'cliente', 'clientes')}</small></div>` : ''}`;
+}
 
-  if (esDueno()) {
-    const dias = [];
-    for (let i = 13; i >= 0; i--) { const d = sumarDias(hoy0, -i); dias.push({ d, k: aFecha(d), valor: 0, n: 0 }); }
-    const idx = Object.fromEntries(dias.map((x, i) => [x.k, i]));
-    ventas.forEach(v => { const i = idx[aFecha(new Date(v.fecha))]; if (i != null) { dias[i].valor += Number(v.total); dias[i].n++; } });
-    const total14 = dias.reduce((t, x) => t + x.valor, 0);
-    $('sub14').textContent = `${pesos(total14)} en total, promedio de ${pesos(total14 / 14)} por día`;
-    if (total14) grafico($('graf14'), dias.map((x, i) => ({ etiqueta: i === 13 ? 'Hoy' : `${DIAS_CORTOS[x.d.getDay()]} ${x.d.getDate()}`,
-      titulo: x.d.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }), valor: x.valor, detalle: plural(x.n, 'venta', 'ventas') })), { alto: 240, etiqueta: 'Ventas por día de los últimos 14 días' });
-    else $('graf14').innerHTML = vacioBloque('reportes', 'Cuando registres ventas verás aquí cómo se comportan día a día.');
+// Lo que necesita atención: stock, vencimientos, facturas, caja y suscripción
+function pintarPendientes() {
+  const cont = $('pendientes'); if (!cont) return;
+  const lista = E.avisos || [];
+  cont.innerHTML = lista.length ? `<div class="pendientes">${lista.map((a, i) => `<div class="pendiente"><span class="marca-punto ${a.tipo}"></span><div class="grow"><b>${esc(a.t)}</b><span>${esc(a.d)}</span></div>${a.ir ? `<button class="btn btn-sm" data-pend="${i}">${esc(a.boton || 'Ver')}</button>` : ''}</div>`).join('')}</div>`
+    : vacioBloque('check', 'Todo en orden por ahora.');
+  cont.querySelectorAll('[data-pend]').forEach(b => b.onclick = () => lista[+b.dataset.pend].ir());
+}
 
-    const tops = {};
-    lineasHoy.forEach(m => { const t = tops[m.producto_id] ||= { c: 0, v: 0 }; t.c += Number(m.cantidad); t.v += Number(m.cantidad) * Number(m.precio_unitario || 0); });
-    const ft = Object.entries(tops).sort((a, b) => b[1].v - a[1].v).slice(0, 7);
-    $('topHoy').innerHTML = ft.length ? barrasH(ft.map(([id, x]) => ({ etiqueta: prodPorId(+id)?.nombre || '—', valor: x.v, texto: pesos(x.v) })))
-      : vacioBloque('vender', 'Aún no hay ventas hoy.');
-
-    const horas = Array.from({ length: 24 }, (_, h) => ({ h, valor: 0, n: 0 }));
-    ventas.forEach(v => { const h = new Date(v.fecha).getHours(); horas[h].valor += Number(v.total); horas[h].n++; });
-    const con = horas.filter(x => x.n);
-    if (con.length) {
-      const ini = Math.min(6, ...con.map(x => x.h)), fin = Math.max(21, ...con.map(x => x.h));
-      const rango = horas.slice(ini, fin + 1);
-      const pico = rango.reduce((a, b) => b.valor > a.valor ? b : a);
-      $('subHoras').textContent = `De ${horaTexto(pico.h)} a ${horaTexto(pico.h + 1)} es cuando más vendes: planea ahí los turnos y el surtido.`;
-      grafico($('grafHoras'), rango.map(x => ({ etiqueta: horaTexto(x.h), titulo: `De ${horaTexto(x.h)} a ${horaTexto(x.h + 1)}`, valor: x.valor, detalle: plural(x.n, 'venta', 'ventas') + ' en 14 días' })),
-        { alto: 210, etiqueta: 'Ventas por hora del día' });
-    } else $('grafHoras').innerHTML = vacioBloque('reloj', 'Aún no hay ventas para calcular las horas pico.');
-  }
-
-  // Por vencer
-  try {
-    const ent = await todo(() => db.from('movimientos').select('producto_id, fecha_vencimiento, fecha').eq('tipo', 'entrada').not('fecha_vencimiento', 'is', null).order('fecha', { ascending: false }));
-    if (!$('listaVence')) return;
-    const ultima = {};
-    ent.forEach(m => { if (!ultima[m.producto_id]) ultima[m.producto_id] = m.fecha_vencimiento; });
-    const limite = aFecha(sumarDias(new Date(), 30)), hoy = aFecha(new Date());
-    const lista = Object.entries(ultima).map(([id, f]) => ({ p: prodPorId(Number(id)), f }))
-      .filter(x => x.p && x.p.activo && x.p.stock > 0 && x.f <= limite).sort((a, b) => a.f.localeCompare(b.f));
-    $('listaVence').innerHTML = lista.length ? `<div class="tabla-wrap"><table><tbody>${lista.slice(0, 8).map(x => {
-      const vencido = x.f < hoy, dias = diasHasta(x.f);
-      return `<tr><td><b>${esc(x.p.nombre)}</b><br><span class="small muted">Stock ${numero(x.p.stock)}</span></td><td class="num"><span class="badge ${vencido ? 'bajo' : dias <= 7 ? 'aviso' : 'neutro'}">${vencido ? 'Vencido' : dias === 0 ? 'Vence hoy' : 'En ' + plural(dias, 'día', 'días')}</span><br><span class="small muted">${fechaCorta(x.f + 'T00:00:00')}</span></td></tr>`;
-    }).join('')}</tbody></table></div>` : vacioBloque('check', 'Nada por vencer en los próximos 30 días.');
-  } catch (e) { if ($('listaVence')) $('listaVence').innerHTML = ''; }
+// Lo que hay que pedir a cada proveedor para volver al doble del stock mínimo
+function modalPedidoSugerido() {
+  const bajo = activos().filter(p => Number(p.stock_minimo) > 0 && p.stock <= Number(p.stock_minimo)).sort((a, b) => a.stock - b.stock);
+  const porProv = {};
+  bajo.forEach(p => { (porProv[p.proveedor_id || 0] ||= []).push({ p, cant: Math.max(Math.ceil(Number(p.stock_minimo) * 2 - p.stock), 1) }); });
+  const claves = Object.keys(porProv);
+  const m = abrirModal(`<h2>Pedido sugerido</h2><p class="muted">Productos en el mínimo o por debajo, con la cantidad para volver a tener el doble del mínimo.</p>
+    ${claves.length ? `<div class="tabla-wrap"><table><tbody>${claves.map(k => {
+      const prov = E.proveedores.find(x => x.id === Number(k));
+      const costo = porProv[k].reduce((t, x) => t + x.cant * Number(x.p.precio_compra || 0), 0);
+      return `<tr><td style="width:34%"><b>${esc(prov?.nombre || 'Sin proveedor')}</b><br><span class="small muted">${plural(porProv[k].length, 'producto', 'productos')}${esDueno() ? ', unos ' + pesos(costo) : ''}</span></td>
+        <td class="small">${porProv[k].map(x => `${numero(x.cant)} × ${esc(x.p.nombre)} <span class="muted">(hay ${numero(x.p.stock)})</span>`).join('<br>')}</td>
+        <td class="acciones">${prov?.telefono ? `<button class="btn btn-sm" data-wa="${k}">${ico('whatsapp')}Enviar</button>` : prov ? '<span class="small muted">Sin teléfono</span>' : ''}</td></tr>`;
+    }).join('')}</tbody></table></div>` : vacioBloque('check', 'No hay productos para pedir.')}
+    <div class="modal-acciones"><button class="btn" id="pedVer">Ver en productos</button><button class="btn btn-primary" data-cerrar>Listo</button></div>`, { ancho: true });
+  m.el.querySelectorAll('[data-wa]').forEach(b => b.onclick = () => {
+    const prov = E.proveedores.find(x => x.id === Number(b.dataset.wa));
+    abrirWhatsApp(prov.telefono, `Hola ${prov.contacto || prov.nombre}, de ${E.tienda.nombre} quiero hacer este pedido:\n` + porProv[b.dataset.wa].map(x => `- ${numero(x.cant)} ${x.p.nombre}`).join('\n') + '\nGracias.');
+  });
+  m.el.querySelector('#pedVer').onclick = () => { m.cerrar(); E.filtroProd.estado = 'bajo'; irA('productos'); };
 }
 
 /* =====================================================================
@@ -911,46 +827,42 @@ const pagosMixtoIniciales = () => [{ medio: 'efectivo', valor: '' }, { medio: 'n
 
 function verVender() {
   const billetes = String(E.tienda.billetes || '').split(',').map(x => Number(x.trim())).filter(Boolean);
-  $('contenido').innerHTML = encabezado('Vender', 'Escanea o busca el producto, revisa el total y cobra',
-      `<button class="btn" id="btnEspera" title="Atajo F4">${ico('pausa')}Poner en espera</button>
-       <button class="btn" id="btnVerEspera">${ico('reloj')}En espera <span class="badge ${E.espera.length ? 'dueno' : 'neutro'}" id="numEspera">${E.espera.length}</span></button>`) +
-    (!E.caja ? `<div class="aviso-caja"><span>${ico('caja')}Abre la caja antes de empezar a vender.</span><button class="btn btn-sm" id="irCaja">Abrir caja</button></div>` : '') +
+  const medios = ['efectivo', 'nequi', 'daviplata', 'tarjeta', 'transferencia', ...(tieneModulo('clientes') ? ['fiado'] : [])];
+  if (!medios.includes(E.medio) && E.medio !== 'mixto') E.medio = 'efectivo';
+  $('contenido').innerHTML = encabezado('Vender', '', E.espera.length ? `<button class="btn" id="btnVerEspera">${ico('reloj')}Ventas guardadas <span class="badge dueno" id="numEspera">${E.espera.length}</span></button>` : '') +
+    (tieneModulo('caja') && !E.caja ? `<div class="aviso-caja"><span>${ico('caja')}Abre la caja antes de empezar a vender.</span><button class="btn btn-sm" id="irCaja">Abrir caja</button></div>` : '') +
     `<div class="pos">
       <div>
-        <div class="panel">
-          <div class="buscador">
-            <div class="grupo">
-              <input type="search" id="buscarVenta" placeholder="Código de barras o nombre del producto…" autocomplete="off" aria-label="Buscar producto">
-              <button class="btn-cam" id="camVenta" title="Escanear con la cámara" aria-label="Escanear con la cámara">${ico('camara')}</button>
-            </div>
-            <div class="resultados hidden" id="resVenta"></div>
+        <div class="buscador buscar-grande">
+          <div class="grupo">
+            <input type="search" id="buscarVenta" placeholder="Busca o escanea un producto" autocomplete="off" aria-label="Buscar producto">
+            <button class="btn-cam" id="camVenta" title="Escanear con la cámara" aria-label="Escanear con la cámara">${ico('camara')}</button>
           </div>
-          <div id="rapidos"></div>
+          <div class="resultados hidden" id="resVenta"></div>
         </div>
-        <div class="barra-pos"><h3>Productos de la venta</h3><span class="muted small" id="cuentaItems"></span></div>
+        <div id="rapidos"></div>
+        <div class="barra-pos"><h3>Venta actual</h3><span class="muted small" id="cuentaItems"></span></div>
         <div class="tabla-wrap"><table>
-          <thead><tr><th>Producto</th><th class="num">Precio</th><th class="num">Cantidad</th><th class="num">Subtotal</th><th></th></tr></thead>
+          <thead><tr><th>Producto</th><th class="num">Cantidad</th><th class="num">Valor</th><th></th></tr></thead>
           <tbody id="tablaCarrito"></tbody>
         </table></div>
       </div>
       <aside class="cobro" aria-label="Cobro">
-        <div class="cobro-cab"><b>${esc(E.tienda.nombre)}</b><span>Atiende ${esc((E.nombre || '').split(' ')[0])}</span></div>
-        <div class="linea-total" style="margin-top:8px"><span>Subtotal</span><span id="vSub" class="num">$0</span></div>
-        <div class="linea-total"><label for="descuento" style="margin:0;font-weight:500;font-size:inherit">Descuento</label><input type="number" id="descuento" min="0" step="50" placeholder="0" style="width:120px;text-align:right;padding:6px 8px;min-height:34px"></div>
-        <div class="bloque-total"><span class="muted small">Total a cobrar</span><div class="total-grande" id="vTotal">$0</div></div>
+        <div class="bloque-total"><span class="total-etq">Total a cobrar</span><div class="total-grande" id="vTotal">$0</div>
+          <div class="small muted hidden" id="lineaSub">Subtotal <span id="vSub">$0</span>, descuento <span id="vDesc">$0</span></div></div>
         ${E.tienda.fe_activa ? `<label style="margin-top:0">Comprobante</label>
         <div class="medios dos" id="comprobantes"><button data-comp="tiquete">Tiquete</button><button data-comp="electronica">Factura electrónica</button></div>` : ''}
-        <label ${E.tienda.fe_activa ? '' : 'style="margin-top:0"'}>Medio de pago</label>
-        <div class="medios" id="medios">${['efectivo', 'nequi', 'daviplata', 'tarjeta', 'transferencia', 'fiado'].map(k => `<button data-medio="${k}">${MEDIOS[k]}</button>`).join('')}
-          <button data-medio="mixto" style="grid-column:1/-1">Pago mixto (varios medios)</button></div>
+        <label ${E.tienda.fe_activa ? '' : 'style="margin-top:0"'}>Cómo paga</label>
+        <div class="medios" id="medios">${medios.map(k => `<button data-medio="${k}">${MEDIOS[k]}</button>`).join('')}</div>
         <div id="zonaEfectivo">
           <label for="pagaCon">¿Con cuánto paga?</label>
-          <input type="number" id="pagaCon" min="0" step="50" placeholder="$0" style="font-size:1.2rem;font-weight:600">
-          <div class="billetes"><button data-b="exacto">Exacto</button>${billetes.map(b => `<button data-b="${b}" style="--billete:${COLOR_BILLETE[b] || 'var(--line)'}">${pesos(b)}</button>`).join('')}<button data-b="limpiar">Borrar</button></div>
+          <input type="number" id="pagaCon" min="0" step="50" placeholder="$0" inputmode="numeric" style="font-size:1.25rem;font-weight:600">
+          <div class="billetes"><button data-b="exacto">Exacto</button>${billetes.map(b => `<button data-b="${b}">${pesos(b)}</button>`).join('')}<button data-b="limpiar">Borrar</button></div>
           <div class="cambio" id="cajaCambio"><span id="txtCambio">Cambio a devolver</span><strong id="valCambio">$0</strong></div>
         </div>
         <div id="zonaMixto" class="hidden">
-          <p class="small muted" style="margin:8px 0 0">Escribe cuánto paga con cada medio. El último se completa solo con lo que falta.</p>
+          <label>Pago con varios medios</label>
+          <p class="small muted" style="margin:0">Escribe cuánto paga con cada uno. El último se completa solo.</p>
           <div id="lineasMixto"></div>
           <div class="row" style="justify-content:space-between;margin-top:8px"><button class="link" id="masMixto">${ico('mas')}Agregar medio</button><b class="small" id="estadoMixto"></b></div>
         </div>
@@ -958,11 +870,19 @@ function verVender() {
           <label id="lblCliente" for="clienteVenta">Cliente</label>
           <input type="search" id="docVenta" placeholder="Cédula, NIT o nombre y Enter" autocomplete="off" style="margin-bottom:6px">
           <p class="small muted" id="docVentaAyuda" style="margin:0 0 6px"></p>
-          <div class="grupo"><select id="clienteVenta"></select><button class="btn btn-sm" id="nuevoClienteVenta" title="Nuevo cliente" aria-label="Nuevo cliente">${ico('mas')}</button></div>
+          <div class="grupo"><select id="clienteVenta"></select><button class="btn" id="nuevoClienteVenta" title="Nuevo cliente" aria-label="Nuevo cliente">${ico('mas')}</button></div>
           <p class="small muted" id="saldoClienteVenta"></p>
         </div>
-        <button class="btn btn-primary btn-lg" id="btnCobrar" style="width:100%;margin-top:16px" disabled>Cobrar <kbd>F2</kbd></button>
-        <button class="btn btn-ghost btn-sm" id="btnVaciar" style="width:100%;margin-top:6px">Vaciar venta</button>
+        <button class="btn btn-primary btn-lg" id="btnCobrar" style="width:100%;margin-top:16px" disabled>Cobrar</button>
+        <details class="mas-opciones" id="masOpciones">
+          <summary>Más opciones</summary>
+          <div class="op">
+            <div><label for="descuento" style="margin-top:2px">Descuento en pesos</label><input type="number" id="descuento" min="0" step="50" placeholder="0" inputmode="numeric"></div>
+            <button class="btn" id="btnMixto" type="button"></button>
+            <button class="btn" id="btnEspera" type="button">${ico('pausa')}Guardar venta para después</button>
+            <button class="btn btn-danger" id="btnVaciar" type="button">Vaciar venta</button>
+          </div>
+        </details>
       </aside>
     </div>
     <div class="barra-cobro-movil"><div><span class="small muted">Total a cobrar</span><b id="vTotalMovil">$0</b></div><button class="btn btn-primary" id="irCobro">Ir a cobrar</button></div>`;
@@ -970,12 +890,13 @@ function verVender() {
 
   $('irCaja')?.addEventListener('click', () => irA('caja'));
   $('btnEspera').onclick = ponerEnEspera;
-  $('btnVerEspera').onclick = modalEspera;
+  $('btnVerEspera')?.addEventListener('click', modalEspera);
   montarBuscador('buscarVenta', 'resVenta', agregarAlCarrito);
   $('camVenta').onclick = () => escanear(c => elegirPorCodigo(c, agregarAlCarrito));
   $('descuento').oninput = pintarCarrito;
   $('pagaCon').oninput = calcularCambio;
   $('medios').querySelectorAll('[data-medio]').forEach(b => b.onclick = () => { E.medio = b.dataset.medio; pintarMedio(); });
+  $('btnMixto').onclick = () => { E.medio = E.medio === 'mixto' ? 'efectivo' : 'mixto'; pintarMedio(); };
   $('comprobantes')?.querySelectorAll('[data-comp]').forEach(b => b.onclick = () => { E.comprobante = b.dataset.comp; pintarMedio(); });
   $('zonaEfectivo').querySelectorAll('[data-b]').forEach(b => b.onclick = () => {
     const v = b.dataset.b, inp = $('pagaCon');
@@ -989,7 +910,7 @@ function verVender() {
   $('nuevoClienteVenta').onclick = () => modalCliente(null, c => { E.clienteVenta = c.id; pintarMedio(); });
   conectarBuscaCliente($('docVenta'), $('docVentaAyuda'), id => { E.clienteVenta = id; pintarMedio(); });
   $('btnCobrar').onclick = cobrar;
-  $('irCobro').onclick = () => document.querySelector('.cobro')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  $('irCobro').onclick = () => document.querySelector('.cobro')?.scrollIntoView({ block: 'start' });
   $('btnVaciar').onclick = async () => { if (E.carrito.length && await preguntar('Vaciar venta', '¿Quitar todos los productos de esta venta?', { ok: 'Vaciar', peligro: true })) { E.carrito = []; pintarCarrito(); } };
   pintarMedio();
   pintarCarrito();
@@ -1013,8 +934,8 @@ async function pintarRapidos() {
   const cont = $('rapidos'); if (!cont) return;
   const lista = ids.map(prodPorId).filter(p => p && p.activo).slice(0, 12);
   if (!lista.length) { cont.innerHTML = ''; return; }
-  cont.innerHTML = `<div class="barra-pos" style="margin:16px 0 0"><h3>Más vendidos</h3><span class="small muted">Toca para agregar</span></div>
-    <div class="rapidos">${lista.map(p => `<button data-rap="${p.id}" ${p.stock <= 0 ? 'disabled title="Agotado"' : ''}><b>${esc(p.nombre)}</b><span>${pesos(p.precio_venta)}${p.stock <= 0 ? ', agotado' : ''}</span></button>`).join('')}</div>`;
+  cont.innerHTML = `<div class="barra-pos" style="margin:16px 0 0"><h3>Más vendidos</h3><span class="small muted">Toca uno para agregarlo</span></div>
+    <div class="rapidos">${lista.map(p => { const agotado = tieneModulo('inventario') && p.stock <= 0; return `<button data-rap="${p.id}" ${agotado ? 'disabled title="Agotado"' : ''}><b>${esc(p.nombre)}</b><span>${pesos(p.precio_venta)}${agotado ? ', agotado' : ''}</span></button>`; }).join('')}</div>`;
   cont.querySelectorAll('[data-rap]').forEach(b => b.onclick = () => agregarAlCarrito(prodPorId(+b.dataset.rap)));
 }
 
@@ -1027,18 +948,17 @@ function guardarEspera() {
   pintarNav();
 }
 async function ponerEnEspera() {
-  if (!E.carrito.length) return aviso('No hay productos en la venta para poner en espera.');
-  const nombre = await preguntar('Poner venta en espera', 'Guarda esta venta para atender a otro cliente y retómala después. Ponle un nombre para reconocerla, por ejemplo "Señora de la bicicleta".', { ok: 'Poner en espera', campo: 'Nombre o referencia (opcional)' });
+  if (!E.carrito.length) return aviso('No hay productos en la venta para guardar.');
+  const nombre = await preguntar('Guardar venta para después', 'Atiende a otro cliente y retómala después. Ponle un nombre para reconocerla, por ejemplo "Señora de la bicicleta".', { ok: 'Guardar venta', campo: 'Nombre o referencia (opcional)' });
   if (!nombre) return;
   E.espera.push({ id: Date.now(), nombre: nombre === true ? `Venta ${E.espera.length + 1}` : nombre, carrito: E.carrito, cliente: E.clienteVenta, hora: new Date().toISOString() });
   E.carrito = []; E.clienteVenta = null;
-  guardarEspera(); pintarCarrito();
-  aviso('Venta puesta en espera', 'ok');
-  $('buscarVenta')?.focus();
+  guardarEspera(); verVender();
+  aviso('Venta guardada para después', 'ok');
 }
 function modalEspera() {
-  if (!E.espera.length) return aviso('No hay ventas en espera.');
-  const m = abrirModal(`<h2>Ventas en espera</h2><p class="muted">Retoma una venta guardada para seguir cobrándola.</p>
+  if (!E.espera.length) return aviso('No hay ventas guardadas.');
+  const m = abrirModal(`<h2>Ventas guardadas</h2><p class="muted">Retoma una venta para seguir cobrándola.</p>
     <div class="tabla-wrap"><table><tbody>${E.espera.map((x, i) => {
       const tot = x.carrito.reduce((t, it) => t + it.cantidad * Number(prodPorId(it.id)?.precio_venta || 0), 0);
       return `<tr><td><b>${esc(x.nombre)}</b><br><span class="small muted">${plural(x.carrito.length, 'producto', 'productos')}, guardada a las ${hora(x.hora)}</span></td><td class="num"><b>${pesos(tot)}</b></td>
@@ -1051,14 +971,15 @@ function modalEspera() {
     E.carrito = x.carrito.filter(it => prodPorId(it.id));
     E.clienteVenta = x.cliente || null;
     guardarEspera(); m.cerrar();
-    if (E.vista !== 'vender') irA('vender'); else { pintarMedio(); pintarCarrito(); }
+    irA('vender');
     aviso(`Retomaste "${x.nombre}"`, 'ok');
   });
   m.el.querySelectorAll('[data-des]').forEach(b => b.onclick = async () => {
     const x = E.espera[+b.dataset.des];
-    if (!await preguntar('Descartar venta en espera', `¿Descartar "${x.nombre}"? Los productos no se venden ni se descuentan del inventario.`, { ok: 'Descartar', peligro: true })) return;
+    if (!await preguntar('Descartar venta guardada', `¿Descartar "${x.nombre}"? Los productos no se venden ni se descuentan del inventario.`, { ok: 'Descartar', peligro: true })) return;
     E.espera.splice(E.espera.indexOf(x), 1);
     guardarEspera(); m.cerrar();
+    if (E.vista === 'vender') verVender();
     if (E.espera.length) modalEspera();
   });
 }
@@ -1071,6 +992,7 @@ function pintarMedio() {
   $('zonaMixto').classList.toggle('hidden', E.medio !== 'mixto');
   if (E.medio === 'mixto') pintarMixto();
   if (!E.tienda.fe_activa) E.comprobante = 'tiquete';
+  if ($('btnMixto')) $('btnMixto').innerHTML = ico('gasto') + (E.medio === 'mixto' ? 'Pagar con un solo medio' : 'Pagar con varios medios');
   $('comprobantes')?.querySelectorAll('[data-comp]').forEach(b => b.classList.toggle('activa', b.dataset.comp === E.comprobante));
   const fiado = E.medio === 'fiado', fe = E.comprobante === 'electronica';
   $('zonaFiado').classList.toggle('hidden', !fiado && !fe);
@@ -1142,17 +1064,17 @@ function pintarCarrito() {
   const tb = $('tablaCarrito');
   if (!tb) return;
   soltarFoco(tb);
+  const conInv = tieneModulo('inventario');
   tb.innerHTML = E.carrito.length ? E.carrito.map(i => {
     const p = prodPorId(i.id);
-    const falta = i.cantidad > p.stock;
+    const falta = conInv && i.cantidad > p.stock;
     return `<tr>
-      <td><b>${esc(p.nombre)}</b><br><span class="small" style="color:${falta ? 'var(--danger)' : 'var(--muted)'}">Disponible: ${numero(p.stock)} ${esc(textoUnidad(p.unidad, p.stock))}${falta ? ', no alcanza' : ''}</span></td>
-      <td class="num">${pesos(p.precio_venta)}</td>
-      <td class="num"><input class="cant" type="number" data-cant="${p.id}" min="0" step="${esGranel(p) ? '0.01' : '1'}" value="${i.cantidad}" aria-label="Cantidad de ${esc(p.nombre)}"></td>
+      <td><b>${esc(p.nombre)}</b><br><span class="small" style="color:${falta ? 'var(--danger)' : 'var(--muted)'}">${pesos(p.precio_venta)} ${esGranel(p) ? 'por ' + esc((UNIDADES[p.unidad] || '').toLowerCase()) : 'c/u'}${falta ? `. Solo hay ${numero(p.stock)}` : ''}</span></td>
+      <td class="num"><input class="cant" type="number" data-cant="${p.id}" min="0" step="${esGranel(p) ? '0.01' : '1'}" value="${i.cantidad}" inputmode="decimal" aria-label="Cantidad de ${esc(p.nombre)}"></td>
       <td class="num"><b>${pesos(i.cantidad * p.precio_venta)}</b></td>
       <td><button class="quitar" data-quitar="${p.id}" title="Quitar" aria-label="Quitar ${esc(p.nombre)}">✕</button></td>
     </tr>`;
-  }).join('') : `<tr><td colspan="5" class="vacio">Escanea o busca un producto para empezar la venta.</td></tr>`;
+  }).join('') : `<tr><td colspan="4" class="vacio">Escanea o busca un producto para empezar.</td></tr>`;
 
   tb.querySelectorAll('[data-cant]').forEach(inp => {
     inp.onchange = () => {
@@ -1164,13 +1086,14 @@ function pintarCarrito() {
   });
   tb.querySelectorAll('[data-quitar]').forEach(b => b.onclick = () => { E.carrito = E.carrito.filter(x => x.id !== Number(b.dataset.quitar)); pintarCarrito(); });
 
-  const { sub, total } = totalesVenta();
-  const unidades = E.carrito.reduce((t, i) => t + Number(i.cantidad), 0);
-  $('cuentaItems').textContent = E.carrito.length ? `${plural(E.carrito.length, 'producto', 'productos')}, ${plural(unidades, 'unidad', 'unidades')}` : '';
+  const { sub, desc, total } = totalesVenta();
+  $('cuentaItems').textContent = E.carrito.length ? plural(E.carrito.length, 'producto', 'productos') : '';
   $('vSub').textContent = pesos(sub);
+  $('vDesc').textContent = pesos(desc);
+  $('lineaSub').classList.toggle('hidden', !desc);
   $('vTotal').textContent = pesos(total);
   if ($('vTotalMovil')) $('vTotalMovil').textContent = pesos(total);
-  $('btnCobrar').disabled = !E.carrito.length || !E.caja;
+  $('btnCobrar').disabled = !E.carrito.length || (tieneModulo('caja') && !E.caja);
   calcularCambio();
   if (E.medio === 'mixto') estadoMixto();
 }
@@ -1188,8 +1111,8 @@ function calcularCambio() {
 let cobrando = false;
 async function cobrar() {
   if (cobrando || !E.carrito.length) return;
-  if (!E.caja) return aviso('Primero abre la caja.', 'error');
-  const faltan = E.carrito.filter(i => i.cantidad > prodPorId(i.id).stock);
+  if (tieneModulo('caja') && !E.caja) return aviso('Primero abre la caja.', 'error');
+  const faltan = tieneModulo('inventario') ? E.carrito.filter(i => i.cantidad > prodPorId(i.id).stock) : [];
   if (faltan.length) return aviso('No hay suficiente stock de: ' + faltan.map(i => prodPorId(i.id).nombre).join(', '), 'error');
   const { desc, total } = totalesVenta();
   const pagoTxt = $('pagaCon').value, pago = pagoTxt ? Number(pagoTxt) : null;
@@ -1209,7 +1132,7 @@ async function cobrar() {
   const fe = E.comprobante === 'electronica';
   const args = {
     p_items: items, p_medio: E.medio, p_pago_con: E.medio === 'efectivo' ? pago : null,
-    p_descuento: desc, p_cliente: (E.medio === 'fiado' || fe) ? E.clienteVenta : null, p_caja: E.caja.id,
+    p_descuento: desc, p_cliente: (E.medio === 'fiado' || fe) ? E.clienteVenta : null, p_caja: E.caja?.id || null,
   };
   if (pagos) args.p_pagos = pagos;
   const { data: v, error } = await db.rpc('registrar_venta', args);
@@ -1440,21 +1363,12 @@ function htmlArqueo(lista, titulo) {
 async function verCaja() {
   const c = $('contenido');
   if (!E.caja) {
-    c.innerHTML = encabezado('Caja', 'Abre la caja al empezar el turno con el dinero que hay en el cajón') +
-      `<div class="col-ancha">
-        <div class="panel"><h2>Abrir caja</h2><p class="sub">La base es el efectivo con el que empiezas, normalmente el sencillo para dar cambio.</p>
+    c.innerHTML = encabezado('Caja', 'La caja está cerrada') +
+      `<div class="panel" style="max-width:620px"><h2>Abrir caja</h2><p class="sub">Escribe el efectivo con el que empiezas, normalmente el sencillo para dar cambio. Al final del turno cierras la caja y te dice si cuadra.</p>
           <label for="baseCaja">Base inicial en efectivo</label>
-          <input type="number" id="baseCaja" min="0" step="50" placeholder="$0" style="font-size:1.2rem">
+          <input type="number" id="baseCaja" min="0" step="50" placeholder="$0" inputmode="numeric" style="font-size:1.25rem">
           <div class="billetes">${[50000, 100000, 150000, 200000].map(b => `<button data-base="${b}">${pesos(b)}</button>`).join('')}</div>
           <button class="btn btn-primary btn-lg" id="btnAbrir" style="width:100%;margin-top:16px">Abrir caja</button>
-        </div>
-        <div class="panel"><h2>Cómo funciona</h2><p class="sub">Un turno de caja, de principio a fin</p>
-          <div class="tabla-wrap"><table><tbody>
-            <tr><td><b>1. Abre</b><br><span class="small muted">Cuenta el sencillo y escríbelo como base.</span></td></tr>
-            <tr><td><b>2. Vende y registra gastos</b><br><span class="small muted">Las ventas, abonos, gastos y retiros se suman solos.</span></td></tr>
-            <tr><td><b>3. Cierra</b><br><span class="small muted">Cuenta el efectivo por billetes. El sistema te dice si cuadra, sobra o falta.</span></td></tr>
-          </tbody></table></div>
-        </div>
       </div><div id="histCajas" style="margin-top:16px"></div>`;
     $('baseCaja').focus();
     c.querySelectorAll('[data-base]').forEach(b => b.onclick = () => { $('baseCaja').value = b.dataset.base; });
@@ -1467,8 +1381,8 @@ async function verCaja() {
       E.caja = data; pintarCaja(); calcularAvisos(); aviso('Caja abierta', 'ok'); verCaja();
     };
   } else {
-    c.innerHTML = encabezado('Caja abierta', `Abierta por ${esc(nombreUsuario(E.caja.usuario_id))} el ${fechaHora(E.caja.abierta_en)}`,
-      `<button class="btn" id="btnMov">${ico('gasto')}Gasto, retiro o ingreso</button><button class="btn" id="btnInforme">${ico('imprimir')}Informe parcial</button>`) +
+    c.innerHTML = encabezado('Caja abierta', `La abrió ${esc(nombreUsuario(E.caja.usuario_id))} el ${fechaHora(E.caja.abierta_en)}`,
+      `<button class="btn" id="btnMov">${ico('gasto')}Registrar gasto o retiro</button><button class="btn" id="btnInforme">${ico('imprimir')}Imprimir informe</button>`) +
       `<div id="resCaja"><div class="kpis">${kpiCargando(4)}</div></div><div id="histCajas" style="margin-top:16px"></div>`;
     $('btnMov').onclick = () => modalMovCaja('gasto');
     let r;
@@ -1614,7 +1528,7 @@ function imprimirCierre(caja, r) {
    ===================================================================== */
 function verEntradas() {
   const en = E.entrada;
-  $('contenido').innerHTML = encabezado('Entrada de mercancía', 'Registra la factura del proveedor con todos sus productos. El stock sube al guardar.') +
+  $('contenido').innerHTML = `<button class="link volver" id="volverProd">${ico('atras')}Productos</button>` + encabezado('Entrada de mercancía', 'Lo que llegó del proveedor. El stock sube al guardar.') +
     `<div class="panel">
       <div class="grid2">
         <div><label style="margin-top:0">Proveedor</label><select id="entProv"><option value="">Sin proveedor</option>${E.proveedores.map(p => `<option value="${p.id}" ${String(en.proveedor) === String(p.id) ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select></div>
@@ -1636,6 +1550,7 @@ function verEntradas() {
     </div>
     <div class="panel" style="margin-top:16px"><h2>Últimas entradas</h2><p class="sub">Las 25 más recientes</p><div id="ultimasEntradas" class="muted">Cargando...</div></div>`;
 
+  $('volverProd').onclick = () => irA('productos');
   $('entProv').onchange = () => en.proveedor = $('entProv').value;
   $('entFactura').oninput = () => en.factura = $('entFactura').value;
   const agregar = p => {
@@ -1678,7 +1593,7 @@ async function guardarEntrada() {
   if (!validas.length) return aviso('Escribe la cantidad que llegó de cada producto.', 'error');
   if (validas.length < en.lineas.length && !await preguntar('Líneas sin cantidad', 'Hay productos sin cantidad; esos no se registrarán. ¿Continuar?')) return;
   const prov = nombreProveedor(Number(en.proveedor));
-  const nota = [en.factura ? 'Factura ' + en.factura : 'Entrada de mercancía', prov].filter(Boolean).join(' · ');
+  const nota = [en.factura ? 'Factura ' + en.factura : 'Entrada de mercancía', prov].filter(Boolean).join(', ');
   const filas = validas.map(l => ({ producto_id: l.id, tipo: 'entrada', cantidad: Number(l.cantidad), precio_unitario: l.costo === '' ? null : Number(l.costo), costo_unitario: l.costo === '' ? null : Number(l.costo), fecha_vencimiento: l.vence || null, nota, ...(en.proveedor ? { proveedor_id: Number(en.proveedor) } : {}) }));
   $('guardarEntrada').disabled = true;
   const { error } = await db.from('movimientos').insert(filas);
@@ -1719,40 +1634,39 @@ async function porVencerIds() {
 
 function verProductos() {
   const f = E.filtroProd;
+  const conInv = tieneModulo('inventario');
+  if (!conInv) f.estado = '';
   const lista = activos();
-  const bajo = lista.filter(p => Number(p.stock_minimo) > 0 && p.stock <= Number(p.stock_minimo)).length;
+  const bajo = conInv ? lista.filter(p => Number(p.stock_minimo) > 0 && p.stock <= Number(p.stock_minimo)).length : 0;
   const valor = lista.reduce((t, p) => t + Math.max(p.stock, 0) * Number(p.precio_compra || 0), 0);
-  $('contenido').innerHTML = encabezado('Productos', `${lista.length} productos activos`,
-    esDueno() ? `<button class="btn" id="btnEtiquetas">${ico('etiqueta')}Etiquetas de precio</button><button class="btn" id="btnExcel" aria-haspopup="menu">${ico('excel')}Excel${ico('abajo')}</button><button class="btn btn-primary" id="btnNuevo">${ico('mas')}Nuevo producto</button>` : '') +
-    `<div class="kpis">
-      <div class="kpi"><span>Productos activos</span><strong>${lista.length}</strong></div>
-      <div class="kpi ${bajo ? 'alerta' : ''}"><span>Con stock bajo</span><strong>${bajo}</strong></div>
-      ${esDueno() ? `<div class="kpi"><span>Valor del inventario (costo)</span><strong>${pesos(valor)}</strong></div>` : ''}
-    </div>
-    <div class="filtros">
-      <input type="search" id="fTexto" placeholder="Buscar por nombre o código..." value="${esc(f.texto)}">
-      <button class="btn-cam" id="fCam">${ico('camara')}</button>
+  const resumen = [plural(lista.length, 'producto activo', 'productos activos'), bajo ? `${numero(bajo)} por pedir` : '', conInv && esDueno() ? `inventario en costo ${pesos(valor)}` : ''].filter(Boolean).join(', ');
+  $('contenido').innerHTML = encabezado('Productos', resumen,
+    (conInv ? `<button class="btn" id="btnEntrada">${ico('entradas')}Registrar entrada</button>` : '') +
+    (esDueno() ? `<button class="btn" id="btnMasProd" aria-haspopup="menu">Más${ico('abajo')}</button><button class="btn btn-primary" id="btnNuevo">${ico('mas')}Nuevo producto</button>` : '')) +
+    `<div class="filtros">
+      <input type="search" id="fTexto" placeholder="Buscar por nombre o código" value="${esc(f.texto)}">
+      <button class="btn-cam" id="fCam" title="Escanear" aria-label="Escanear">${ico('camara')}</button>
       <select id="fCat"><option value="">Todas las categorías</option>${E.categorias.map(c => `<option value="${c.id}" ${String(f.cat) === String(c.id) ? 'selected' : ''}>${esc(c.nombre)}</option>`).join('')}</select>
-      <select id="fEstado">
-        <option value="">Todos</option><option value="bajo" ${f.estado === 'bajo' ? 'selected' : ''}>Stock bajo</option>
-        <option value="cero" ${f.estado === 'cero' ? 'selected' : ''}>Sin stock</option><option value="vence" ${f.estado === 'vence' ? 'selected' : ''}>Por vencer (30 días)</option>
-      </select>
+      ${conInv ? `<select id="fEstado">
+        <option value="">Todos</option><option value="bajo" ${f.estado === 'bajo' ? 'selected' : ''}>Por pedir</option>
+        <option value="cero" ${f.estado === 'cero' ? 'selected' : ''}>Agotados</option><option value="vence" ${f.estado === 'vence' ? 'selected' : ''}>Por vencer</option>
+      </select>` : ''}
       ${esDueno() ? `<label class="row small" style="margin:0;gap:6px"><input type="checkbox" id="fInactivos" ${f.inactivos ? 'checked' : ''} style="width:auto">Ver desactivados</label>` : ''}
     </div>
     <div class="tabla-wrap"><table>
-      <thead><tr><th>Producto</th><th>Categoría</th><th>Unidad</th>${esDueno() ? '<th class="num">P. compra</th>' : ''}<th class="num">P. venta</th>${esDueno() ? '<th class="num">IVA</th><th class="num">Margen</th>' : ''}<th class="num">Stock</th>${esDueno() ? '<th></th>' : ''}</tr></thead>
+      <thead><tr><th>Producto</th><th class="sin-movil">Categoría</th><th class="num">Precio</th>${conInv ? '<th class="num">Stock</th>' : ''}${esDueno() ? '<th></th>' : ''}</tr></thead>
       <tbody id="tablaProductos"></tbody>
     </table></div>`;
 
+  $('btnEntrada')?.addEventListener('click', () => irA('entradas'));
   if (esDueno()) {
     $('btnNuevo').onclick = () => modalProducto();
-    $('btnExcel').onclick = () => menuExcel($('btnExcel'));
-    $('btnEtiquetas').onclick = () => modalEtiquetas(ultimaListaProd);
+    $('btnMasProd').onclick = () => menuProductos($('btnMasProd'));
     $('fInactivos').onchange = () => { f.inactivos = $('fInactivos').checked; pintarProductos(); };
   }
   $('fTexto').oninput = () => { f.texto = $('fTexto').value; pintarProductos(); };
   $('fCat').onchange = () => { f.cat = $('fCat').value; pintarProductos(); };
-  $('fEstado').onchange = () => { f.estado = $('fEstado').value; pintarProductos(); };
+  $('fEstado')?.addEventListener('change', () => { f.estado = $('fEstado').value; pintarProductos(); });
   $('fCam').onclick = () => escanear(c => { $('fTexto').value = f.texto = c; pintarProductos(); const p = activos().find(x => x.codigo_barras === c); if (p && esDueno()) modalProducto(p); else if (!p) codigoNoRegistrado(c); });
   pintarProductos();
 }
@@ -1769,25 +1683,26 @@ async function pintarProductos() {
     (f.estado !== 'cero' || p.stock <= 0) &&
     (f.estado !== 'vence' || cacheVence.has(p.id)));
   ultimaListaProd = lista;
-  const cols = esDueno() ? 10 : 6;
+  const conInv = tieneModulo('inventario');
+  const cols = 3 + (conInv ? 1 : 0) + (esDueno() ? 1 : 0);
   $('tablaProductos').innerHTML = lista.length ? lista.map(p => {
     const bajo = Number(p.stock_minimo) > 0 && p.stock <= Number(p.stock_minimo);
     const margen = Number(p.precio_venta) ? (1 - Number(p.precio_compra) / Number(p.precio_venta)) * 100 : 0;
     return `<tr>
       <td><strong>${esc(p.nombre)}</strong>${!p.activo ? ' <span class="badge neutro">Desactivado</span>' : ''}<br><span class="small muted">${esc(p.codigo_barras || 'Sin código')}</span></td>
-      <td>${esc(nombreCategoria(p.categoria_id))}</td>
-      <td>${UNIDADES[p.unidad] || p.unidad}</td>
-      ${esDueno() ? `<td class="num">${pesos(p.precio_compra)}</td>` : ''}
-      <td class="num">${pesos(p.precio_venta)}</td>
-      ${esDueno() ? `<td class="num small" style="white-space:nowrap">${textoIva(p)}</td>` : ''}
-      ${esDueno() ? `<td class="num"><span class="small ${margen < 10 ? '' : 'muted'}" style="${margen < 10 ? 'color:var(--danger)' : ''}">${Math.round(margen)}%</span></td>` : ''}
-      <td class="num"><span class="badge ${p.stock <= 0 ? 'bajo' : bajo ? 'aviso' : 'ok'}">${numero(p.stock)}</span></td>
-      ${esDueno() ? `<td class="num" style="white-space:nowrap"><button class="link" data-editar="${p.id}">Editar</button><button class="link" data-ajustar="${p.id}">Ajustar</button><button class="link" data-kardex="${p.id}">Historial</button></td>` : ''}
+      <td class="sin-movil">${esc(nombreCategoria(p.categoria_id))}</td>
+      <td class="num"><b>${pesos(p.precio_venta)}</b><br>${esDueno() ? `<span class="small sin-movil" style="color:${margen < 10 ? 'var(--danger)' : 'var(--muted)'}">Costo ${pesos(p.precio_compra)}, gana ${Math.round(margen)} %</span>` : `<span class="small muted">${esc(UNIDADES[p.unidad] || p.unidad)}</span>`}</td>
+      ${conInv ? `<td class="num"><span class="badge ${p.stock <= 0 ? 'bajo' : bajo ? 'aviso' : 'ok'}">${numero(p.stock)}</span></td>` : ''}
+      ${esDueno() ? `<td class="acciones"><button class="link" data-editar="${p.id}">Editar</button>${conInv ? `<button class="link" data-masp="${p.id}" aria-haspopup="menu">Más</button>` : ''}</td>` : ''}
     </tr>`;
   }).join('') : `<tr><td colspan="${cols}" class="vacio">${E.productos.length ? 'Ningún producto coincide con el filtro.' : 'No hay productos. Crea el primero o impórtalos desde Excel.'}</td></tr>`;
   $('tablaProductos').querySelectorAll('[data-editar]').forEach(b => b.onclick = () => modalProducto(prodPorId(Number(b.dataset.editar))));
-  $('tablaProductos').querySelectorAll('[data-ajustar]').forEach(b => b.onclick = () => modalAjuste(prodPorId(Number(b.dataset.ajustar))));
-  $('tablaProductos').querySelectorAll('[data-kardex]').forEach(b => b.onclick = () => modalKardex(prodPorId(Number(b.dataset.kardex))));
+  $('tablaProductos').querySelectorAll('[data-masp]').forEach(b => b.onclick = () => {
+    const p = prodPorId(Number(b.dataset.masp));
+    const mp = menuPop(b, `<button class="menu-item" data-a="aj">${ico('editar')}<span>Ajustar stock<small>Corrige el stock después de contar</small></span></button>
+      <button class="menu-item" data-a="hi">${ico('historial')}<span>Ver historial<small>Entradas, ventas y ajustes</small></span></button>`, { ancho: 280 });
+    mp.pop.querySelectorAll('[data-a]').forEach(x => x.onclick = () => { mp.cerrar(); x.dataset.a === 'aj' ? modalAjuste(p) : modalKardex(p); });
+  });
 }
 
 function modalProducto(p = null, codigo = '') {
@@ -1824,7 +1739,7 @@ function modalProducto(p = null, codigo = '') {
   el('#pCam').onclick = () => escanear(c => { el('#pCodigo').value = c; });
   if (p) {
     db.from('historial_precios').select('*').eq('producto_id', p.id).order('fecha', { ascending: false }).limit(10).then(({ data }) => {
-      el('#pHist').innerHTML = data?.length ? data.map(h => `${fechaHora(h.fecha)} · ${esc(nombreUsuario(h.usuario_id))}: venta ${pesos(h.precio_venta_antes)} → ${pesos(h.precio_venta_despues)}, compra ${pesos(h.precio_compra_antes)} → ${pesos(h.precio_compra_despues)}`).join('<br>') : 'Sin cambios de precio.';
+      el('#pHist').innerHTML = data?.length ? data.map(h => `${fechaHora(h.fecha)}, ${esc(nombreUsuario(h.usuario_id))}: venta ${pesos(h.precio_venta_antes)} → ${pesos(h.precio_venta_despues)}, compra ${pesos(h.precio_compra_antes)} → ${pesos(h.precio_compra_despues)}`).join('<br>') : 'Sin cambios de precio.';
     });
     el('#pActivo').onclick = async () => {
       if (p.activo && !await preguntar('Desactivar producto', `"${p.nombre}" dejará de aparecer en ventas y listas. Su historial se conserva.`, { ok: 'Desactivar', peligro: true })) return;
@@ -1848,7 +1763,7 @@ function modalProducto(p = null, codigo = '') {
     const stockIni = !p ? Number(el('#pStock').value || 0) : 0;
     if (stockIni > 0) await db.from('movimientos').insert({ producto_id: r.data.id, tipo: 'entrada', cantidad: stockIni, precio_unitario: datos.precio_compra, costo_unitario: datos.precio_compra, nota: 'Stock inicial' });
     m.cerrar(); await cargarDatos(); aviso('Producto guardado', 'ok');
-    if (E.vista === 'productos') verProductos(); else if (E.vista === 'vender') { const nuevo = prodPorId(r.data.id); verVender(); if (!p && nuevo.stock > 0) agregarAlCarrito(nuevo); }
+    if (E.vista === 'productos') verProductos(); else if (E.vista === 'vender') { const nuevo = prodPorId(r.data.id); verVender(); if (!p && (nuevo.stock > 0 || !tieneModulo('inventario'))) agregarAlCarrito(nuevo); }
     else if (E.vista === 'entradas') verEntradas();
   };
 }
@@ -1856,7 +1771,7 @@ function modalProducto(p = null, codigo = '') {
 function modalAjuste(p) {
   const m = abrirModal(`
     <h2>Ajustar inventario</h2>
-    <p class="muted">${esc(p.nombre)} · Stock en sistema: <strong>${numero(p.stock)}</strong></p>
+    <p class="muted">${esc(p.nombre)}. Stock en sistema: <strong>${numero(p.stock)}</strong></p>
     <label>Motivo</label>
     <select id="aMotivo">
       <option value="conteo">Conteo físico (escribo la cantidad real)</option>
@@ -1885,7 +1800,7 @@ function modalAjuste(p) {
     const motivo = conteo ? 'Conteo físico' : el('#aMotivo').value;
     const { error } = await db.from('movimientos').insert({
       producto_id: p.id, tipo: dif > 0 ? 'ajuste_entrada' : 'baja', cantidad: Math.abs(dif),
-      costo_unitario: p.precio_compra, nota: motivo + (el('#aNota').value ? ' · ' + el('#aNota').value : ''),
+      costo_unitario: p.precio_compra, nota: motivo + (el('#aNota').value ? ', ' + el('#aNota').value : ''),
     });
     if (error) return aviso(errorTexto(error), 'error');
     m.cerrar(); await cargarDatos(); aviso('Ajuste registrado', 'ok'); verProductos();
@@ -2052,12 +1967,15 @@ async function exportarInventario() {
   XLSX.writeFile(wb, `inventario_${aFecha(new Date())}.xlsx`);
 }
 
-function menuExcel(ancla) {
+function menuProductos(ancla) {
+  const conInv = tieneModulo('inventario');
   const p = menuPop(ancla, `
-    <button class="menu-item" data-a="exp">${ico('descargar')}<span>Exportar inventario<small>Productos activos con stock, costos y valores</small></span></button>
-    <button class="menu-item" data-a="imp">${ico('excel')}<span>Importar productos<small>Carga muchos productos desde una hoja de Excel</small></span></button>
+    <button class="menu-item" data-a="etq">${ico('etiqueta')}<span>Etiquetas de precio<small>Imprime etiquetas con código de barras</small></span></button>
+    ${conInv ? `<button class="menu-item" data-a="ped">${ico('whatsapp')}<span>Pedido sugerido<small>Lo que hay que pedir a cada proveedor</small></span></button>` : ''}
+    <button class="menu-item" data-a="exp">${ico('descargar')}<span>Exportar a Excel<small>Productos activos con precios${conInv ? ', stock' : ''} y costos</small></span></button>
+    <button class="menu-item" data-a="imp">${ico('excel')}<span>Importar desde Excel<small>Carga muchos productos de una vez</small></span></button>
     <button class="menu-item" data-a="pla">${ico('factura')}<span>Descargar plantilla<small>El formato para importar productos</small></span></button>`, { ancho: 330 });
-  p.pop.querySelectorAll('[data-a]').forEach(b => b.onclick = () => { p.cerrar(); ({ exp: exportarInventario, imp: importarExcel, pla: descargarPlantilla })[b.dataset.a](); });
+  p.pop.querySelectorAll('[data-a]').forEach(b => b.onclick = () => { p.cerrar(); ({ etq: () => modalEtiquetas(ultimaListaProd), ped: modalPedidoSugerido, exp: exportarInventario, imp: importarExcel, pla: descargarPlantilla })[b.dataset.a](); });
 }
 
 /* =====================================================================
@@ -2066,31 +1984,24 @@ function menuExcel(ancla) {
 function verClientes() {
   const total = E.clientes.reduce((t, c) => t + Math.max(c.saldo, 0), 0);
   const conDeuda = E.clientes.filter(c => c.saldo > 0).length;
-  $('contenido').innerHTML = encabezado('Clientes y fiados', 'Lleva la cuenta de lo que te deben y registra los abonos', `<button class="btn btn-primary" id="btnNuevoCliente">${ico('mas')}Nuevo cliente</button>`) +
-    `<div class="kpis"><div class="kpi alerta"><span>Total por cobrar</span><strong>${pesos(total)}</strong></div><div class="kpi"><span>Clientes con deuda</span><strong>${conDeuda}</strong></div><div class="kpi"><span>Clientes</span><strong>${E.clientes.length}</strong></div></div>
-    <div class="filtros"><input type="search" id="buscarCliente" placeholder="Buscar por nombre, cédula o teléfono..."><select id="filtroDeuda"><option value="">Todos</option><option value="deuda">Con deuda</option></select></div>
-    <div class="tabla-wrap"><table><thead><tr><th>Cliente</th><th>Teléfono</th><th class="num">Saldo</th><th></th></tr></thead><tbody id="tablaClientes"></tbody></table></div>`;
+  $('contenido').innerHTML = encabezado('Clientes y fiados', conDeuda ? `Te deben ${pesos(total)} entre ${plural(conDeuda, 'cliente', 'clientes')}` : 'Nadie te debe por ahora',
+      `<button class="btn btn-primary" id="btnNuevoCliente">${ico('mas')}Nuevo cliente</button>`) +
+    `<div class="filtros"><input type="search" id="buscarCliente" placeholder="Buscar por nombre, cédula o teléfono"><select id="filtroDeuda"><option value="">Todos</option><option value="deuda">Con deuda</option></select></div>
+    <div class="tabla-wrap"><table><thead><tr><th>Cliente</th><th class="sin-movil">Teléfono</th><th class="num">Debe</th><th></th></tr></thead><tbody id="tablaClientes"></tbody></table></div>
+    <p class="small muted" style="margin:10px 2px 0">Toca un cliente para ver su cuenta, editarlo o cobrarle por WhatsApp.</p>`;
   $('btnNuevoCliente').onclick = () => modalCliente(null, () => verClientes());
   const pintar = () => {
     const t = $('buscarCliente').value.trim().toLowerCase(), d = $('filtroDeuda').value;
     const lista = E.clientes.filter(c => (!t || c.nombre.toLowerCase().includes(t) || (c.telefono || '').includes(t) || (c.documento || '').includes(t)) && (!d || c.saldo > 0)).sort((a, b) => b.saldo - a.saldo);
-    $('tablaClientes').innerHTML = lista.length ? lista.map(c => `<tr>
+    $('tablaClientes').innerHTML = lista.length ? lista.map(c => `<tr class="clic" data-ver="${c.id}">
       <td><strong>${esc(c.nombre)}</strong>${c.documento ? `<br><span class="small muted">${esc(c.documento)}</span>` : ''}</td>
-      <td>${esc(c.telefono || '—')}</td>
-      <td class="num"><span class="badge ${c.saldo > 0 ? 'bajo' : 'ok'}">${pesos(c.saldo)}</span></td>
-      <td class="num" style="white-space:nowrap">
-        ${c.saldo > 0 ? `<button class="link" data-abonar="${c.id}">Abonar</button>` : ''}
-        <button class="link" data-hist="${c.id}">Historial</button>
-        ${c.saldo > 0 && c.telefono ? `<button class="link" data-cobrar="${c.id}">Cobrar por WhatsApp</button>` : ''}
-        <button class="link" data-editarc="${c.id}">Editar</button>
-        ${esDueno() ? `<button class="link danger" data-borrarc="${c.id}">Eliminar</button>` : ''}
-      </td></tr>`).join('') : `<tr><td colspan="4" class="vacio">${E.clientes.length ? 'Ningún cliente coincide.' : 'Aún no hay clientes. Créalos aquí o al fiar una venta.'}</td></tr>`;
+      <td class="sin-movil">${esc(c.telefono || '—')}</td>
+      <td class="num">${c.saldo > 0 ? `<b style="color:var(--danger)">${pesos(c.saldo)}</b>` : '<span class="muted">$0</span>'}</td>
+      <td class="acciones">${c.saldo > 0 ? `<button class="btn btn-sm" data-abonar="${c.id}">Abonar</button>` : ''}</td></tr>`).join('')
+      : `<tr><td colspan="4" class="vacio">${E.clientes.length ? 'Ningún cliente coincide.' : 'Aún no hay clientes. Créalos aquí o al fiar una venta.'}</td></tr>`;
     const cli = id => E.clientes.find(c => c.id === Number(id));
-    $('tablaClientes').querySelectorAll('[data-abonar]').forEach(b => b.onclick = () => modalAbono(cli(b.dataset.abonar)));
-    $('tablaClientes').querySelectorAll('[data-hist]').forEach(b => b.onclick = () => modalHistorialCliente(cli(b.dataset.hist)));
-    $('tablaClientes').querySelectorAll('[data-editarc]').forEach(b => b.onclick = () => modalCliente(cli(b.dataset.editarc), () => verClientes()));
-    $('tablaClientes').querySelectorAll('[data-borrarc]').forEach(b => b.onclick = () => eliminarCliente(cli(b.dataset.borrarc)));
-    $('tablaClientes').querySelectorAll('[data-cobrar]').forEach(b => b.onclick = () => { const c = cli(b.dataset.cobrar); abrirWhatsApp(c.telefono, `Hola ${c.nombre}, te saluda ${E.tienda.nombre}. Te recordamos que tienes un saldo pendiente de ${pesos(c.saldo)}. ¡Gracias!`); });
+    $('tablaClientes').querySelectorAll('[data-ver]').forEach(r => r.onclick = () => modalHistorialCliente(cli(r.dataset.ver)));
+    $('tablaClientes').querySelectorAll('[data-abonar]').forEach(b => b.onclick = e => { e.stopPropagation(); modalAbono(cli(b.dataset.abonar)); });
   };
   $('buscarCliente').oninput = pintar; $('filtroDeuda').onchange = pintar;
   pintar();
@@ -2253,7 +2164,7 @@ async function eliminarCliente(c) {
   if (!await preguntar('Eliminar cliente', `¿Eliminar a ${c.nombre}? Si tiene ventas registradas, se archiva: deja de aparecer en las listas pero sus ventas y facturas se conservan.`, { ok: 'Eliminar', peligro: true })) return;
   const { data, error } = await db.rpc('eliminar_cliente', { p_cliente: c.id });
   if (error) return aviso(errorTexto(error), 'error');
-  await cargarDatos(); verClientes();
+  await cargarDatos(); if (E.vista === 'clientes') verClientes();
   aviso(data === 'archivado' ? `${c.nombre} quedó archivado (tenía ventas)` : `${c.nombre} eliminado`, 'ok');
 }
 
@@ -2263,7 +2174,7 @@ function modalAbono(c) {
     <div class="billetes"><button data-total>Todo (${pesos(c.saldo)})</button></div>
     <label>Medio de pago</label><select id="abMedio">${MEDIOS_PAGO.map(k => `<option value="${k}">${MEDIOS[k]}</option>`).join('')}</select>
     <label>Nota (opcional)</label><input id="abNota">
-    ${!E.caja ? '<p class="small" style="color:var(--warn)">No tienes caja abierta: el abono no se sumará a ningún cierre de caja.</p>' : ''}
+    ${tieneModulo('caja') && !E.caja ? '<p class="small" style="color:var(--warn)">No tienes caja abierta: el abono no se sumará a ningún cierre de caja.</p>' : ''}
     <div class="modal-acciones"><button class="btn" data-cerrar>Cancelar</button><button class="btn btn-primary" id="abGuardar">Registrar abono</button></div>`);
   m.el.querySelector('[data-total]').onclick = () => m.el.querySelector('#abValor').value = c.saldo;
   m.el.querySelector('#abGuardar').onclick = async () => {
@@ -2272,19 +2183,31 @@ function modalAbono(c) {
     if (valor > c.saldo && !await preguntar('Abono mayor a la deuda', `El abono (${pesos(valor)}) es mayor que lo que debe (${pesos(c.saldo)}). ¿Registrar de todas formas?`)) return;
     const { error } = await db.from('abonos').insert({ cliente_id: c.id, valor, medio_pago: m.el.querySelector('#abMedio').value, caja_id: E.caja?.id || null, nota: m.el.querySelector('#abNota').value || null });
     if (error) return aviso(errorTexto(error), 'error');
-    m.cerrar(); await cargarDatos(); aviso(`Abono de ${pesos(valor)} registrado`, 'ok'); verClientes();
+    m.cerrar(); await cargarDatos(); aviso(`Abono de ${pesos(valor)} registrado`, 'ok'); if (E.vista === 'clientes') verClientes();
   };
 }
 
 async function modalHistorialCliente(c) {
-  const m = abrirModal(`<h2>${esc(c.nombre)}</h2><p class="muted">Saldo actual: <strong>${pesos(c.saldo)}</strong></p><div id="hcLista" class="muted">Cargando...</div>
-    <div class="modal-acciones"><button class="btn" data-cerrar>Cerrar</button></div>`, { ancho: true });
+  const m = abrirModal(`<h2>${esc(c.nombre)}</h2><p class="muted">${c.saldo > 0 ? `Debe <strong style="color:var(--danger)">${pesos(c.saldo)}</strong>` : 'No debe nada'}${c.telefono ? `. Teléfono ${esc(c.telefono)}` : ''}${c.documento ? `. Documento ${esc(c.documento)}` : ''}</p>
+    <div id="hcLista" class="muted">Cargando...</div>
+    <div class="modal-acciones" style="justify-content:space-between">
+      <div>${esDueno() ? '<button class="btn btn-danger" id="hcBorrar">Eliminar</button>' : ''}</div>
+      <div class="row">
+        <button class="btn" id="hcEditar">${ico('editar')}Editar</button>
+        ${c.saldo > 0 && c.telefono ? `<button class="btn" id="hcWa">${ico('whatsapp')}Cobrar por WhatsApp</button>` : ''}
+        ${c.saldo > 0 ? '<button class="btn btn-primary" id="hcAbonar">Abonar</button>' : '<button class="btn btn-primary" data-cerrar>Listo</button>'}
+      </div>
+    </div>`, { ancho: true });
+  m.el.querySelector('#hcEditar').onclick = () => { m.cerrar(); modalCliente(c, () => { if (E.vista === 'clientes') verClientes(); }); };
+  m.el.querySelector('#hcWa')?.addEventListener('click', () => abrirWhatsApp(c.telefono, `Hola ${c.nombre}, te saluda ${E.tienda.nombre}. Te recordamos que tienes un saldo pendiente de ${pesos(c.saldo)}. ¡Gracias!`));
+  m.el.querySelector('#hcAbonar')?.addEventListener('click', () => { m.cerrar(); modalAbono(c); });
+  m.el.querySelector('#hcBorrar')?.addEventListener('click', () => { m.cerrar(); eliminarCliente(c); });
   const [v, a] = await Promise.all([
     db.from('ventas').select('id, numero, fecha, total, estado').eq('cliente_id', c.id).eq('medio_pago', 'fiado').order('fecha', { ascending: false }).limit(100),
     db.from('abonos').select('fecha, valor, medio_pago, nota').eq('cliente_id', c.id).order('fecha', { ascending: false }).limit(100),
   ]);
-  const filas = [...(v.data || []).map(x => ({ f: x.fecha, d: `Fiado · venta #${x.numero}${x.estado === 'anulada' ? ' (anulada)' : ''}`, cargo: x.estado === 'anulada' ? 0 : Number(x.total) })),
-                 ...(a.data || []).map(x => ({ f: x.fecha, d: `${x.medio_pago === 'nota_credito' ? 'Nota crédito' : 'Abono · ' + (MEDIOS[x.medio_pago] || x.medio_pago)}${x.nota ? ' · ' + x.nota : ''}`, abono: Number(x.valor) }))].sort((x, y) => new Date(y.f) - new Date(x.f));
+  const filas = [...(v.data || []).map(x => ({ f: x.fecha, d: `Fiado, venta #${x.numero}${x.estado === 'anulada' ? ' (anulada)' : ''}`, cargo: x.estado === 'anulada' ? 0 : Number(x.total) })),
+                 ...(a.data || []).map(x => ({ f: x.fecha, d: `${x.medio_pago === 'nota_credito' ? 'Nota crédito' : 'Abono en ' + (MEDIOS[x.medio_pago] || x.medio_pago).toLowerCase()}${x.nota ? ', ' + x.nota : ''}`, abono: Number(x.valor) }))].sort((x, y) => new Date(y.f) - new Date(x.f));
   const el = m.el.querySelector('#hcLista');
   el.className = '';
   el.innerHTML = filas.length ? `<div class="tabla-wrap"><table><thead><tr><th>Fecha</th><th>Detalle</th><th class="num">Fiado</th><th class="num">Abono</th></tr></thead><tbody>${filas.map(x =>
@@ -2308,21 +2231,24 @@ function rangoPeriodo() {
 }
 const PERIODOS = { hoy: 'Hoy', ayer: 'Ayer', semana: 'Esta semana', mes: 'Este mes', mesant: 'Mes anterior', anio: 'Este año' };
 const PESTANAS_REP = { resumen: 'Resumen', ventas: 'Ventas', productos: 'Productos', utilidad: 'Gastos y utilidad', impuestos: 'Impuestos', compras: 'Compras' };
+const pestanasRep = () => tieneModulo('reportes') ? PESTANAS_REP : { ventas: 'Ventas' };
 let datosReporte = null;
 
 async function verReportes() {
   const { d, h } = rangoPeriodo();
-  const tab = PESTANAS_REP[E.tabReporte] ? E.tabReporte : 'resumen';
-  $('contenido').innerHTML = encabezado('Reportes', 'Ventas, utilidad, impuestos y compras del periodo que elijas', `<button class="btn" id="btnExportar">${ico('excel')}Exportar a Excel</button>`) +
+  const tabs = pestanasRep(), completo = tieneModulo('reportes');
+  if (!tabs[E.tabReporte]) E.tabReporte = Object.keys(tabs)[0];
+  const tab = E.tabReporte;
+  $('contenido').innerHTML = encabezado(completo ? 'Reportes' : 'Ventas', completo ? 'Elige el periodo y mira tus números' : 'Historial de ventas, tiquetes y facturas', completo ? `<button class="btn" id="btnExportar">${ico('excel')}Exportar a Excel</button>` : '') +
     `<div class="periodos">${Object.entries(PERIODOS).map(([k, v]) => `<button class="chip ${E.periodo === k ? 'activa' : ''}" data-p="${k}">${v}</button>`).join('')}
       <div><label for="rDesde">Desde</label><input type="date" class="fecha" id="rDesde" value="${aFecha(d)}"></div>
       <div><label for="rHasta">Hasta</label><input type="date" class="fecha" id="rHasta" value="${aFecha(h)}"></div>
       <button class="btn" id="rVer">Ver periodo</button></div>
-    <div class="pestanas" role="tablist">${Object.entries(PESTANAS_REP).map(([k, v]) => `<button role="tab" data-tab="${k}" class="${tab === k ? 'activa' : ''}" aria-selected="${tab === k}">${v}</button>`).join('')}</div>
+    ${Object.keys(tabs).length > 1 ? `<div class="pestanas" role="tablist">${Object.entries(tabs).map(([k, v]) => `<button role="tab" data-tab="${k}" class="${tab === k ? 'activa' : ''}" aria-selected="${tab === k}">${v}</button>`).join('')}</div>` : ''}
     <div id="rCuerpo"><div class="kpis">${kpiCargando(4)}</div></div>`;
   $('contenido').querySelectorAll('[data-p]').forEach(b => b.onclick = () => { E.periodo = b.dataset.p; verReportes(); });
   $('rVer').onclick = () => { E.periodo = 'rango'; E.desde = $('rDesde').value; E.hasta = $('rHasta').value; if (E.desde && E.hasta && E.desde <= E.hasta) verReportes(); else aviso('Revisa las fechas: "Desde" debe ser anterior a "Hasta".', 'error'); };
-  $('btnExportar').onclick = exportarReporte;
+  $('btnExportar')?.addEventListener('click', exportarReporte);
   $('contenido').querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
     E.tabReporte = b.dataset.tab;
     $('contenido').querySelectorAll('[data-tab]').forEach(x => { x.classList.toggle('activa', x === b); x.setAttribute('aria-selected', x === b); });
@@ -2410,7 +2336,7 @@ function analizarPeriodo(ventas, movsCaja, compras, r) {
 function pintarPestanaReporte() {
   const A = datosReporte, cont = $('rCuerpo');
   if (!A || !cont) return;
-  const tab = PESTANAS_REP[E.tabReporte] ? E.tabReporte : 'resumen';
+  const tab = pestanasRep()[E.tabReporte] ? E.tabReporte : Object.keys(pestanasRep())[0];
   ({ resumen: repResumen, ventas: repVentas, productos: repProductos, utilidad: repUtilidad, impuestos: repImpuestos, compras: repCompras })[tab](A, cont);
 }
 
@@ -2741,15 +2667,15 @@ async function exportarReporte() {
    CONFIGURACIÓN (DUEÑO)
    ===================================================================== */
 const COLORES = ['#0f7b6c', '#047857', '#1d4ed8', '#4338ca', '#6d28d9', '#9f1239', '#c2410c', '#a16207', '#334155'];
-const PESTANAS_CONF = { marca: 'Marca y tiquete', usuarios: 'Usuarios', catalogo: 'Categorías y proveedores', plan: 'Plan y suscripción', copia: 'Copia de seguridad' };
+const PESTANAS_CONF = { marca: 'Marca y tiquete', usuarios: 'Usuarios', catalogo: 'Categorías y proveedores', plan: 'Plan y paquetes', copia: 'Copia de seguridad', reiniciar: 'Reiniciar datos' };
 
 function verConfig() {
   const tab = PESTANAS_CONF[E.tabConfig] ? E.tabConfig : 'marca';
-  $('contenido').innerHTML = encabezado('Mi tienda', 'Cómo se ve tu tienda, quién la usa y qué incluye tu plan') +
+  $('contenido').innerHTML = encabezado('Mi tienda') +
     `<div class="pestanas" role="tablist">${Object.entries(PESTANAS_CONF).map(([k, v]) => `<button role="tab" data-tab="${k}" class="${tab === k ? 'activa' : ''}" aria-selected="${tab === k}">${v}</button>`).join('')}</div>
     <div id="confCuerpo"></div>`;
   $('contenido').querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { E.tabConfig = b.dataset.tab; verConfig(); });
-  ({ marca: confMarca, usuarios: confUsuarios, catalogo: confCatalogo, plan: confPlan, copia: confCopia })[tab]($('confCuerpo'));
+  ({ marca: confMarca, usuarios: confUsuarios, catalogo: confCatalogo, plan: confPlan, copia: confCopia, reiniciar: confReiniciar })[tab]($('confCuerpo'));
 }
 
 function confMarca(cont) {
@@ -2871,19 +2797,20 @@ function confPlan(cont) {
   const t = E.tienda, plan = PLANES[t.plan] ? t.plan : 'basico', p = PLANES[plan];
   const dias = t.proximo_pago ? diasHasta(t.proximo_pago) : null;
   const estadoPago = dias == null ? '' : dias < 0 ? '<span class="badge bajo">Vencido</span>' : dias <= 5 ? `<span class="badge aviso">En ${plural(dias, 'día', 'días')}</span>` : '<span class="badge ok">Al día</span>';
+  const paquetes = [['Punto de venta', 'Vender, cobrar, tiquetes y productos', true], ...Object.entries(MODULOS).map(([k, x]) => [x.n, x.d, tieneModulo(k)]),
+    ['Facturación electrónica', 'Facturas y notas crédito ante la DIAN' + (t.fe_activa && t.fe_ambiente !== 'produccion' ? '. Ahora en modo pruebas' : ''), !!t.fe_activa]];
   cont.innerHTML = `<div class="dos-col">
-    <div class="panel"><h2>Tu plan</h2><p class="sub">Lo que incluye tu suscripción</p>
-      <div class="plan-caja"><span class="chip-ico ok" style="width:52px;height:52px">${ico('plan')}</span><div><div class="cifra" style="font-size:1.45rem">${p.n}</div><div class="muted">${p.d}</div></div></div>
-      <div class="tabla-wrap" style="margin-top:16px"><table><tbody>
+    <div class="panel" style="align-self:start"><h2>Tu plan</h2><p class="sub">${p.n}: ${p.d}</p>
+      <div class="tabla-wrap"><table><tbody>
         <tr><td>Valor mensual</td><td class="num"><b>${Number(t.valor_mensual) ? pesos(t.valor_mensual) : 'Por definir'}</b></td></tr>
         <tr><td>Próximo pago</td><td class="num">${t.proximo_pago ? fechaCorta(t.proximo_pago + 'T00:00:00') + ' ' + estadoPago : 'Por definir'}</td></tr>
-        <tr><td>Facturación electrónica</td><td class="num">${t.fe_activa ? '<span class="badge ok">Activa</span>' : '<span class="badge neutro">No activa</span>'}${t.fe_activa && t.fe_ambiente === 'pruebas' ? ' <span class="badge aviso">Pruebas</span>' : ''}</td></tr>
         <tr><td>Estado del servicio</td><td class="num"><span class="badge ok">Activo</span></td></tr>
       </tbody></table></div>
-      <p class="small muted" style="margin:12px 0 0">Para cambiar de plan, activar la facturación electrónica o renovar, comunícate con el administrador del software.</p>
+      <p class="small muted" style="margin:12px 0 0">Para cambiar de plan o renovar, comunícate con el administrador del software.</p>
     </div>
-    <div class="panel"><h2>Planes disponibles</h2><p class="sub">Compara lo que incluye cada uno</p>
-      <div class="tabla-wrap"><table><tbody>${Object.entries(PLANES).map(([k, x]) => `<tr><td><b>${x.n}</b>${k === plan ? ' <span class="badge dueno">Tu plan</span>' : ''}<br><span class="small muted">${x.d}</span></td></tr>`).join('')}</tbody></table></div>
+    <div class="panel"><h2>Paquetes</h2><p class="sub">Lo que puedes usar en tu tienda</p>
+      <div class="paquetes">${paquetes.map(([n, d, on]) => `<div class="paquete"><div class="grow"><b>${n}</b><span>${d}</span></div><span class="badge ${on ? 'ok' : 'neutro'}">${on ? 'Incluido' : 'No incluido'}</span></div>`).join('')}</div>
+      ${paquetes.some(x => !x[2]) ? '<p class="small muted" style="margin:12px 0 0">Para agregar un paquete, comunícate con el administrador del software.</p>' : ''}
     </div>
   </div>`;
 }
@@ -2930,6 +2857,36 @@ function confCopia(cont) {
       aviso('Copia de seguridad descargada', 'ok');
     } catch (e) { est.textContent = 'No se pudo preparar la copia: ' + errorTexto(e); }
     btn.disabled = false;
+  };
+}
+
+// Empezar de cero: borra ventas y movimientos (o todo) de la tienda
+function confReiniciar(cont) {
+  cont.innerHTML = `<div class="panel zona-peligro" style="max-width:780px"><h2>Reiniciar los datos de la tienda</h2>
+    <p class="sub">Para empezar de cero, por ejemplo después de hacer pruebas. No se puede deshacer.</p>
+    <div class="opciones-reinicio">
+      <label><input type="radio" name="alcance" value="movimientos" checked><span><b>Poner todo en cero</b><span>Borra ventas, facturas, notas crédito, caja, gastos, fiados y abonos, y deja el inventario en 0. Conserva tus productos, precios, clientes y proveedores.</span></span></label>
+      <label><input type="radio" name="alcance" value="todo"><span><b>Borrar todo</b><span>Además borra productos, categorías, clientes y proveedores. La tienda queda como nueva.</span></span></label>
+    </div>
+    <p class="small muted" style="margin:12px 0 0">Se conservan la marca, los usuarios, el plan y la facturación electrónica. Las facturas ya enviadas a la DIAN no se anulan.</p>
+    <div class="row" style="margin-top:16px"><button class="btn" id="irCopia">${ico('descargar')}Descargar copia antes</button><button class="btn btn-danger-lleno" id="btnReiniciar">${ico('reiniciar')}Reiniciar datos</button></div>
+  </div>`;
+  $('irCopia').onclick = () => { E.tabConfig = 'copia'; verConfig(); };
+  $('btnReiniciar').onclick = async () => {
+    const alcance = cont.querySelector('[name="alcance"]:checked').value;
+    const texto = alcance === 'todo' ? 'Se borrarán todos los datos de la tienda: ventas, caja, fiados, productos, clientes y proveedores.'
+      : 'Se borrarán las ventas, facturas, caja, gastos, fiados y abonos, y el inventario quedará en 0.';
+    const r = await preguntar('Reiniciar datos', texto + '\n\nNo se puede deshacer. Escribe BORRAR para confirmar.', { ok: 'Reiniciar', peligro: true, campo: 'Escribe BORRAR' });
+    if (!r) return;
+    if (String(r).trim().toUpperCase() !== 'BORRAR') return aviso('No se reinició: escribe la palabra BORRAR.', 'error');
+    const btn = $('btnReiniciar'); btn.disabled = true;
+    const { error } = await db.rpc('restablecer_inventario', { p_alcance: alcance, p_confirmacion: 'BORRAR' });
+    btn.disabled = false;
+    if (error) return aviso(/restablecer_inventario|schema cache|does not exist|Could not find/i.test(error.message) ? 'Falta correr la actualización de la base de datos (migracion_v9.sql).' : errorTexto(error), 'error');
+    E.carrito = []; E.espera = []; guardarEspera(); E.masVendidos = null; E.entrada = { lineas: [], proveedor: '', factura: '' };
+    await cargarDatos();
+    aviso(alcance === 'todo' ? 'Listo: la tienda quedó como nueva' : 'Listo: todo quedó en cero', 'ok');
+    irA('inicio');
   };
 }
 
@@ -3011,7 +2968,6 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (popActual) { cerrarPops(); return; }
     if (pilaModales.length) { pilaModales.at(-1).cerrar(); return; }
-    if ($('menu').classList.contains('abierto')) { cerrarMenu(); return; }
   }
   if ($('app').classList.contains('hidden') || !E.tienda) return;
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); if (!pilaModales.length) abrirPaleta(); return; }
@@ -3029,7 +2985,6 @@ setInterval(() => { if (E.tienda && !document.hidden) calcularAvisos(); }, 30000
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
 aplicarTema(document.documentElement.dataset.theme || 'light');
-aplicarColapso(leerLocal('colapsado') === '1');
 iniciar();
 </script>
 </body>

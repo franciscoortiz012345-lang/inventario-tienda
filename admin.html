@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Administración | Plataforma de softwares</title>
-<meta name="theme-color" content="#14233c">
+<meta name="theme-color" content="#f3f4f1">
 <meta name="robots" content="noindex">
 <script>try{var t=localStorage.getItem('tema');document.documentElement.dataset.theme=t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="estilos.css?v=6">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilos.css?v=9">
 <link rel="icon" href="icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 </head>
@@ -18,27 +18,19 @@
 <div id="toasts" aria-live="polite"></div>
 
 <!-- ========== INGRESO ========== -->
-<section id="vLogin" class="login hidden">
-  <div class="login-marca">
-    <div class="lm-top"><div class="marca-logo" id="logoLogin"></div><span>Panel de administración</span></div>
-    <div>
-      <h1>Todos tus softwares, sus clientes y sus cobros en un solo lugar.</h1>
-      <p>Crea empresas y usuarios, controla qué software usa cada uno, sus planes y pagos, y configura la facturación electrónica.</p>
-    </div>
-    <div class="lm-pie">Acceso exclusivo para el administrador del software.</div>
+<section id="vLogin" class="ingreso hidden">
+  <div class="ingreso-marca"><div class="marca-logo" id="logoLogin"></div><span>Panel de administración</span></div>
+  <div class="ingreso-caja">
+    <h1>Iniciar sesión</h1>
+    <p class="muted" style="margin:6px 0 0">Entra con tu cuenta de administrador.</p>
+    <form id="fLogin">
+      <label for="lEmail">Correo</label><input type="email" id="lEmail" required autocomplete="email">
+      <label for="lClave">Contraseña</label><input type="password" id="lClave" required autocomplete="current-password">
+      <button class="btn btn-primary btn-lg" type="submit" id="bEntrar">Entrar</button>
+      <div class="msg" id="lMsg"></div>
+    </form>
   </div>
-  <div class="login-form">
-    <div class="lf-caja">
-      <h2>Iniciar sesión</h2>
-      <p class="muted" style="margin:6px 0 0">Entra con tu cuenta de administrador.</p>
-      <form id="fLogin">
-        <label for="lEmail">Correo</label><input type="email" id="lEmail" required autocomplete="email">
-        <label for="lClave">Contraseña</label><input type="password" id="lClave" required autocomplete="current-password">
-        <button class="btn btn-primary btn-lg" type="submit" id="bEntrar">Entrar</button>
-        <div class="msg" id="lMsg"></div>
-      </form>
-    </div>
-  </div>
+  <div class="ingreso-pie">Acceso exclusivo para el administrador del software.</div>
 </section>
 
 <!-- ========== PANEL ========== -->
@@ -46,7 +38,7 @@
   <aside class="sidebar" id="menu">
     <div class="marca"><div class="marca-logo" id="logoPanel"></div><div style="min-width:0"><b>Administración</b><span class="sb-sub">Plataforma de softwares</span></div></div>
     <nav id="nav" aria-label="Secciones"></nav>
-    <div class="sb-pie"><div class="sb-version">Versión 6.0</div></div>
+    <div class="sb-pie"><div class="sb-version">Versión 7.0</div></div>
   </aside>
   <div class="principal">
     <header class="topbar">
@@ -99,6 +91,13 @@ const PLANES = {
 };
 const REGIMENES = ['Responsable de IVA', 'No responsable de IVA', 'Régimen simple de tributación', 'Gran contribuyente'];
 const RESPONSABILIDADES = { 'R-99-PN': 'No responsable (R-99-PN)', 'O-13': 'Gran contribuyente (O-13)', 'O-15': 'Autorretenedor (O-15)', 'O-23': 'Agente de retención de IVA (O-23)', 'O-47': 'Régimen simple de tributación (O-47)' };
+// Paquetes de Inventario Tienda que se activan por empresa (el punto de venta siempre va incluido)
+const MODULOS = {
+  caja: { n: 'Caja', d: 'Abrir y cerrar caja, gastos, retiros y cuadre del efectivo' },
+  inventario: { n: 'Inventario', d: 'Stock, entradas de mercancía, vencimientos y pedido sugerido' },
+  clientes: { n: 'Clientes y fiados', d: 'Ventas fiadas, abonos y cobro por WhatsApp' },
+  reportes: { n: 'Reportes y contabilidad', d: 'Utilidad, gastos, impuestos, compras y exportar a Excel' },
+};
 const MEDIOS_SUS = { transferencia: 'Transferencia', nequi: 'Nequi', daviplata: 'Daviplata', efectivo: 'Efectivo', tarjeta: 'Tarjeta' };
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
@@ -121,6 +120,7 @@ const ICONOS = {
   check: '<path d="M20 6L9 17l-5-5"/>',
   reloj: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   enlace: '<path d="M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7l1.7-1.7"/>',
+  reiniciar: '<path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
 };
 const ico = n => `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONOS[n] || ''}</svg>`;
 const vacioBloque = (i, t) => `<div class="vacio-bloque">${ico(i)}<div>${t}</div></div>`;
@@ -139,6 +139,7 @@ const errorTexto = e => {
   if (/Failed to send a request|FunctionsFetchError|404/i.test(m)) return 'La función "quick-handler" no está instalada en Supabase. Revisa el paso de instalación.';
   if (/duplicate key|23505/.test(m)) return 'Ese correo ya está registrado.';
   if (/row-level security|permission denied/.test(m)) return 'No tienes permiso para hacer esto.';
+  if (/modulos|restablecer_inventario|tiene_modulo/.test(m) && /does not exist|Could not find|schema cache/i.test(m)) return 'Falta ejecutar la migración V9 en Supabase (migracion_v9.sql).';
   if (/tienda_softwares|softwares|plataforma|razon_social|p_software/.test(m) && /does not exist|Could not find|schema cache/i.test(m)) return 'Falta ejecutar la migración V7 en Supabase.';
   if (/admin_registrar_pago|suscripcion_pagos|plan|proximo_pago/.test(m) && /does not exist|Could not find/i.test(m)) return 'Falta ejecutar la migración V6 en Supabase.';
   return m;
@@ -502,6 +503,13 @@ async function verTienda(id) {
           </div></div>`).join('') : vacioBloque('softwares', 'Esta empresa todavía no tiene softwares contratados.')}
       </div>
     </div>
+    <div class="panel" style="margin-top:16px"><div class="panel-cab"><div><h2>Paquetes de ${esc(nombreSw('inventario'))}</h2><p class="sub">Lo que esta empresa puede usar. Lo que apagues desaparece de su app; sus datos se conservan.</p></div><button class="btn btn-primary btn-sm" id="bPaquetes">Guardar paquetes</button></div>
+      <div class="paquetes">
+        <div class="paquete"><div class="grow"><b>Punto de venta</b><span>Vender, cobrar, tiquetes y productos. Siempre incluido.</span></div><label class="interruptor"><input type="checkbox" checked disabled aria-label="Punto de venta"><span></span></label></div>
+        ${Object.entries(MODULOS).map(([k, x]) => `<div class="paquete"><div class="grow"><b>${x.n}</b><span>${x.d}</span></div><label class="interruptor"><input type="checkbox" data-mod="${k}" aria-label="${x.n}" ${!Array.isArray(t.modulos) || t.modulos.includes(k) ? 'checked' : ''}><span></span></label></div>`).join('')}
+        <div class="paquete"><div class="grow"><b>Facturación electrónica</b><span>Facturas y notas crédito ante la DIAN. Las credenciales de Factus van más abajo.</span></div><label class="interruptor"><input type="checkbox" id="pqFe" aria-label="Facturación electrónica" ${t.fe_activa ? 'checked' : ''}><span></span></label></div>
+      </div>
+    </div>
     <div class="panel" style="margin-top:16px"><div class="panel-cab"><div><h2>Usuarios</h2><p class="sub">Cuentas de esta empresa y los softwares a los que entra cada una</p></div><button class="btn btn-primary btn-sm" id="bNuevoU">${ico('mas')}Nuevo usuario</button></div>
       <div id="tablaU" class="muted">Cargando…</div></div>
     <div class="dos-col" style="margin-top:16px">
@@ -523,6 +531,14 @@ async function verTienda(id) {
         ${pagos.length ? tablaSimple('<th>Fecha</th><th>Software</th><th>Periodo</th><th class="num">Valor</th><th></th>', pagos.map(p => `<tr><td style="white-space:nowrap">${fechaCorta(p.fecha)}${p.nota ? `<br><span class="small muted" style="white-space:normal">${esc(p.nota)}</span>` : ''}</td><td>${esc(nombreSw(p.software || 'inventario'))}<br><span class="small muted">${esc(MEDIOS_SUS[p.medio] || p.medio || '')}</span></td><td style="white-space:nowrap">${esc(p.periodo || '')}</td><td class="num" style="white-space:nowrap"><b>${pesos(p.valor)}</b></td><td class="acciones"><button class="link danger" data-borrarpago="${p.id}">Eliminar</button></td></tr>`).join(''))
           : vacioBloque('pagos', 'Aún no hay pagos registrados.')}
       </div>
+    </div>
+    <div class="panel zona-peligro" style="margin-top:16px"><h2>Reiniciar datos</h2><p class="sub">Borra los datos de ${esc(nombreSw('inventario'))} de esta empresa para que empiece de cero. No se puede deshacer.</p>
+      <div class="opciones-reinicio">
+        <label><input type="radio" name="aAlcance" value="movimientos" checked><span><b>Poner todo en cero</b><span>Borra ventas, facturas, notas crédito, caja, gastos, fiados y abonos, y deja el inventario en 0. Conserva productos, precios, clientes y proveedores.</span></span></label>
+        <label><input type="radio" name="aAlcance" value="todo"><span><b>Borrar todo</b><span>Además borra productos, categorías, clientes y proveedores. La tienda queda como nueva.</span></span></label>
+      </div>
+      <p class="small muted" style="margin:12px 0 0">Se conservan los datos de la empresa, los usuarios, los softwares, los pagos y la facturación electrónica. Las facturas ya enviadas a la DIAN no se anulan.</p>
+      <div class="modal-acciones" style="margin-top:14px"><button class="btn btn-danger-lleno" id="bReiniciar">${ico('reiniciar')}Reiniciar datos</button></div>
     </div>`;
   const el = s => $('contenido').querySelector(s);
   $('bVolver').onclick = () => ir('tiendas');
@@ -587,6 +603,36 @@ async function verTienda(id) {
     if (error) return aviso(errorTexto(error), 'error');
     aviso(nuevo === 'activa' ? 'Empresa reactivada' : 'Empresa suspendida', 'ok');
     verTienda(id);
+  };
+  // Paquetes: la facturación es la misma casilla del panel de Factus
+  $('pqFe').onchange = () => { $('feActiva').checked = $('pqFe').checked; };
+  $('feActiva').addEventListener('change', () => { $('pqFe').checked = $('feActiva').checked; });
+  $('bPaquetes').onclick = async () => {
+    const modulos = [...$('contenido').querySelectorAll('[data-mod]')].filter(c => c.checked).map(c => c.dataset.mod);
+    const fe = $('pqFe').checked;
+    if (fe && !t.fe_activa && t.fe_ambiente === 'produccion' && !await confirmar('Activar facturación', 'Esta empresa está en producción: sus facturas irán a la DIAN como reales. ¿Continuar?', 'Sí, activar')) return;
+    const b = $('bPaquetes'); b.disabled = true;
+    const { error } = await db.from('tiendas').update({ modulos, fe_activa: fe }).eq('id', id);
+    b.disabled = false;
+    if (error) return aviso(errorTexto(error), 'error');
+    t.modulos = modulos; t.fe_activa = fe;
+    aviso('Paquetes guardados. La empresa los ve al volver a entrar o recargar la app.', 'ok');
+  };
+  $('bReiniciar').onclick = () => {
+    const alcance = $('contenido').querySelector('[name="aAlcance"]:checked').value;
+    const que = alcance === 'todo' ? 'Se borrarán todos los datos de la tienda: ventas, caja, fiados, productos, clientes y proveedores.' : 'Se borrarán las ventas, facturas, caja, gastos, fiados y abonos, y el inventario quedará en 0.';
+    const m = abrirModal(`<h2>Reiniciar datos de ${esc(t.nombre)}</h2><p class="muted">${que} No se puede deshacer.</p>
+      <label for="rConf">Escribe BORRAR para confirmar</label><input id="rConf" autocomplete="off" autofocus>
+      <div class="modal-acciones"><button class="btn" data-cerrar>Cancelar</button><button class="btn btn-danger-lleno" id="rOk" disabled>Reiniciar datos</button></div>`);
+    const conf = m.el.querySelector('#rConf'), ok = m.el.querySelector('#rOk');
+    conf.oninput = () => ok.disabled = conf.value.trim().toUpperCase() !== 'BORRAR';
+    ok.onclick = async () => {
+      ok.disabled = true; ok.textContent = 'Reiniciando…';
+      const { data, error } = await db.rpc('admin_restablecer_inventario', { p_tienda: id, p_alcance: alcance });
+      if (error) { ok.disabled = false; ok.textContent = 'Reiniciar datos'; return aviso(errorTexto(error), 'error'); }
+      m.cerrar();
+      aviso(`Listo: se borraron ${plural(Number(data?.ventas || 0), 'venta', 'ventas')}${alcance === 'todo' ? ` y ${plural(Number(data?.productos || 0), 'producto', 'productos')}` : ''}.`, 'ok');
+    };
   };
   if (!tiendas.length) cargarTiendas().catch(() => {});
   $('bNuevoU').onclick = () => modalUsuario(null, id, () => pintarUsuarios($('tablaU'), id));

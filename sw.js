@@ -1,6 +1,6 @@
 // Service worker de Inventario Tienda.
 // Siempre intenta traer la versión más nueva de internet; si no hay conexión, usa la copia guardada.
-const CACHE = 'inventario-v9';
+const CACHE = 'inventario-v10';
 const BASICOS = ['./', './index.html', './estilos.css', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
